@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>식물의 구조와 기능 — 단원 문제 풀기</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:16px;color:#111;background:#f8f9fa;min-height:100vh}
+#root{max-width:780px;margin:0 auto;padding:0 0 80px}
+.btn{padding:10px 20px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#111;font-size:15px;cursor:pointer;transition:background 0.15s;font-family:inherit}
+.btn:hover{background:#f0f0f0}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-green{background:#4ade80;border-color:#22c55e;color:#052e16;font-weight:600}
+.btn-green:hover:not(:disabled){background:#22c55e}
+.btn-blue{background:#dbeafe;border-color:#3b82f6;color:#1e3a8a;font-weight:600}
+.btn-blue:hover:not(:disabled){background:#bfdbfe}
+.btn-amber{background:#fef3c7;border-color:#d97706;color:#78350f;font-weight:600}
+.btn-amber:hover:not(:disabled){background:#fde68a}
+.btn-purple{background:#ede9fe;border-color:#7c3aed;color:#2e1065;font-weight:600}
+.btn-purple:hover:not(:disabled){background:#ddd6fe}
+.btn-excel{background:#166534;border-color:#14532d;color:#fff;font-weight:600}
+.btn-excel:hover:not(:disabled){background:#14532d}
+.btn-excel2{background:#0f3d20;border-color:#0a2912;color:#fff;font-weight:600}
+.btn-excel2:hover:not(:disabled){background:#0a2912}
+.card{background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:1.25rem}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.badge-사실적{background:#dbeafe;color:#1e40af}
+.badge-적용적{background:#fef3c7;color:#92400e}
+.badge-전이적{background:#ede9fe;color:#4c1d95}
+input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:8px;font-size:15px;color:#111;background:#fff;font-family:inherit;outline:none}
+input[type=text]:focus,textarea:focus{border-color:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,0.15)}
+textarea{resize:vertical;min-height:110px;line-height:1.7}
+.opt-btn{width:100%;text-align:left;padding:13px 16px;border-radius:8px;border:1.5px solid rgba(0,0,0,0.12);background:#fff;color:#111;font-size:15px;cursor:pointer;transition:all 0.15s;margin-bottom:8px;font-family:inherit;line-height:1.5}
+.opt-btn:hover{border-color:#4ade80;background:#f0fdf4}
+.opt-btn.selected{border-color:#22c55e;background:#f0fdf4;color:#052e16;font-weight:600}
+.progress-bar{height:6px;background:rgba(0,0,0,0.08);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#4ade80;transition:width 0.3s ease}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 12px;background:#f1f5f9;text-align:left;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.sc{text-align:center;font-weight:600}
+.page{padding:1.5rem 1rem}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useCallback} = React;
+
+/* ══════════════════════════════════════════
+   ★ Google Apps Script 배포 URL 만 입력
+     (API 키는 GAS 스크립트 속성에 보관)
+══════════════════════════════════════════ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyNXWhozKySxCmdIvvipw9qEIGEsQeEJ8OBYwgRgcMSjTS-Ox8cPuRXo2sNRUDLVZ3jYQ/exec';
+
+/* ══════════════════════════════════════════
+   ★ 교사 비밀번호 — 원하는 비밀번호로 변경하세요
+══════════════════════════════════════════ */
+const TEACHER_PASSWORD = 'teacher3409';
+
+/* ══════════════════════════════════════════
+   문항 데이터
+══════════════════════════════════════════ */
+const EXAMS = {
+A:{label:'A형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'세포에 대한 설명으로 맞는 것은?',
+   opts:['세포는 눈으로 볼 수 있을 만큼 크다.','세포는 생물을 이루는 기본 단위이다.','식물에는 세포가 없다.','세포는 한 종류의 모양만 있다.'],ans:2},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'뿌리의 역할로 알맞지 않은 것은?',
+   opts:['물을 흡수한다.','식물을 지탱한다.','양분을 저장하기도 한다.','광합성을 통해 양분을 만든다.'],ans:4},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'줄기가 하는 역할 중 하나는?',
+   opts:['뿌리에서 흡수한 물을 잎으로 전달하는 통로 역할을 한다.','이산화탄소를 흡수한다.','노폐물을 걸러낸다.','씨앗을 만든다.'],ans:1},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'광합성에 필요한 재료로 묶인 것은?',
+   opts:['산소, 이산화탄소','빛, 이산화탄소, 물','빛, 산소, 오줌','물, 질소, 산소'],ans:2},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'꽃가루받이에 대한 설명으로 맞는 것은?',
+   opts:['씨앗이 땅에 떨어지는 것이다.','수술의 꽃가루가 암술에 옮겨 붙는 것이다.','잎에서 물이 수증기로 빠져 나가는 것이다.','뿌리가 물을 흡수하는 것이다.'],ans:2},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'파 뿌리 끝을 잘라보면 솜털 같은 구조가 있다. 이 구조의 역할은?',
+   opts:['씨앗을 만든다.','광합성을 한다.','물을 흡수하는 면적을 넓혀 흡수량을 늘린다.','줄기를 지지한다.'],ans:3},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'줄기가 하는 일을 바르게 묶은 것은?',
+   opts:['물과 양분이 지나가는 통로가 되고, 식물체를 받쳐 준다.','빛으로 직접 양분을 만들고, 물을 흡수한다.','꽃가루를 만들고, 노폐물을 걸러 낸다.','씨를 만들고, 수증기를 내보낸다.'],ans:1},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'광합성에 대한 설명으로 옳은 것을 바르게 묶은 것은?',
+   opts:['주로 뿌리에서 일어나고, 빛이 없어도 되며, 산소를 흡수한다.','주로 잎에서 일어나고, 빛이 필요하며, 산소가 만들어진다.','주로 줄기에서 일어나고, 양분을 분해하며, 이산화탄소를 만든다.','주로 꽃에서 일어나고, 물을 내보내며, 질소가 만들어진다.'],ans:2},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'증산작용에 대한 설명으로 옳은 것을 바르게 묶은 것은?',
+   opts:['주로 뿌리에서 일어나고, 물을 빨아들이며, 뿌리털을 통한다.','주로 줄기에서 일어나고, 양분을 저장하며, 줄기의 마디를 통한다.','주로 잎에서 일어나고, 물이 수증기로 빠져나가며, 잎의 기공을 통한다.','주로 꽃에서 일어나고, 산소를 빨아들이며, 꽃잎을 통한다.'],ans:3},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'꽃잎이 화려하고 향기로운 꽃은 주로 어떤 방법으로 꽃가루받이가 이루어지는가?',
+   opts:['바람','물','곤충이나 새','스스로 흔들림'],ans:3},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'당근과 감자는 모양이 비슷하게 생겼지만 식물에서 서로 다른 기관이다. 어떻게 다른지 기관 이름을 쓰고 구별하는 방법을 설명하시오.',
+   model:'당근은 뿌리, 감자는 줄기(덩이줄기)이다. 감자에는 눈(마디)이 있어서 거기서 싹이 나는데, 이는 줄기의 마디에 해당한다. 당근에는 그런 마디가 없다.',
+   keys:['뿌리','줄기','덩이줄기','눈','마디']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'사막에 사는 선인장의 잎은 왜 가시처럼 변해 있는지 증산작용과 연관지어 설명하시오.',
+   model:'잎이 넓으면 기공이 많아 증산작용으로 수분이 많이 빠져나간다. 사막에서는 물이 귀하므로 잎을 좁고 작은 가시 형태로 바꾸어 증산작용을 최소화하고 수분 손실을 줄인 것이다.',
+   keys:['기공','증산작용','수분 손실','수분']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'봄에 피는 식물에서 꽃이 피지 않으면 어떤 결과가 생길지 꽃과 열매의 역할과 연결하여 설명하시오.',
+   model:'꽃이 없으면 꽃가루받이가 이루어지지 않아 씨가 만들어지지 않는다. 씨가 없으면 열매도 만들어지지 않고, 그 식물은 번식을 할 수 없게 된다.',
+   keys:['꽃가루받이','씨','열매','번식']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'나무를 잘라도 뿌리가 살아 있으면 새 줄기가 돋아나는 경우가 있다. 이 현상을 식물 기관의 연결 관계로 설명하시오.',
+   model:'뿌리에 저장된 양분과 뿌리가 흡수하는 물이 있으면, 줄기가 잘려도 뿌리에서 새 줄기와 잎이 다시 자랄 수 있다. 이는 각 기관이 연결되어 있어 한 기관이 다른 기관을 지원하는 관계를 보여 준다.',
+   keys:['뿌리','양분','줄기','생장']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'식물이 광합성으로 만든 양분이 어떻게 식물 전체에 공급되는지 뿌리·줄기·잎의 연결 과정으로 설명하시오.',
+   model:'잎에서 광합성으로 만들어진 양분은 줄기 내의 통로를 통해 이동한다. 줄기를 통해 뿌리, 열매, 꽃 등 필요한 곳으로 운반되어 사용되거나 저장된다. 이처럼 잎→줄기→전체 기관으로 양분이 공급된다.',
+   keys:['광합성','양분','줄기','통로']}
+]},
+
+B:{label:'B형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'식물 세포에 대한 설명으로 옳은 것은?',
+   opts:['세포는 맨눈으로 쉽게 관찰된다.','생물의 몸은 세포로 이루어져 있다.','세포의 모양은 모두 똑같다.','식물은 세포로 되어 있지 않다.'],ans:2},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'다음 중 뿌리가 하는 일이 아닌 것은?',
+   opts:['땅속에서 물을 빨아들인다.','식물이 쓰러지지 않게 붙잡는다.','잎에서 빛으로 양분을 만든다.','당근처럼 양분을 저장하기도 한다.'],ans:3},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'줄기의 기능으로 알맞은 것은?',
+   opts:['빛을 모아 직접 양분을 만든다.','물과 양분이 지나가는 통로가 된다.','꽃가루를 직접 만들어 낸다.','물을 수증기로 내보낸다.'],ans:2},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'식물이 광합성을 할 때 필요한 것끼리 바르게 묶은 것은?',
+   opts:['빛, 물, 이산화탄소','산소, 물, 질소','빛, 산소, 흙','이산화탄소, 산소, 소금'],ans:1},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'다음 중 꽃가루받이를 바르게 설명한 것은?',
+   opts:['꽃잎이 떨어지는 것이다.','잎에서 양분을 만드는 것이다.','수술의 꽃가루가 암술머리에 닿는 것이다.','뿌리가 양분을 저장하는 것이다.'],ans:3},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'뿌리에 가늘게 나 있는 뿌리털이 많으면 좋은 점은?',
+   opts:['꽃을 더 많이 피운다.','물과 닿는 면적이 넓어져 물을 더 잘 흡수한다.','잎에서 광합성이 빨라진다.','줄기가 더 단단해진다.'],ans:2},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'다음 중 줄기의 기능을 모두 고른 것은?  ㉠ 물과 양분이 지나가는 통로 역할  ㉡ 식물체를 받쳐 지지하는 역할  ㉢ 빛을 받아 직접 양분을 만드는 역할  ㉣ 땅속에서 물을 빨아들이는 역할',
+   opts:['㉠, ㉢','㉠, ㉡','㉡, ㉣','㉢, ㉣'],ans:2},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'광합성에 대한 설명으로 옳은 것을 모두 고른 것은?  ㉠ 주로 잎에서 일어난다  ㉡ 빛이 있어야 한다  ㉢ 산소가 만들어진다  ㉣ 빛이 없어도 잘 일어난다',
+   opts:['㉠, ㉣','㉡, ㉣','㉠, ㉡, ㉢','㉠, ㉢, ㉣'],ans:3},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'증산작용에 대한 설명으로 옳은 것을 모두 고른 것은?  ㉠ 주로 잎에서 일어난다  ㉡ 물이 수증기로 빠져나간다  ㉢ 잎의 기공을 통해 일어난다  ㉣ 뿌리가 물을 빨아들이는 작용이다',
+   opts:['㉠, ㉣','㉢, ㉣','㉠, ㉡','㉠, ㉡, ㉢'],ans:4},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'달콤한 꿀과 진한 향기를 가진 꽃이 꽃가루받이를 하는 가장 흔한 방법은?',
+   opts:['바람에 날려서','물에 떠내려가서','곤충을 끌어들여서','저절로 떨어져서'],ans:3},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'고구마와 감자는 땅속에 있고 모양도 비슷하지만 서로 다른 기관일 수 있다. 두 기관이 무엇인지 쓰고 어떻게 구별하는지 설명하시오.',
+   model:'고구마는 뿌리(뿌리에 양분 저장), 감자는 줄기(덩이줄기)이다. 감자에는 눈(마디)이 있어 싹이 나지만 고구마에는 그런 마디가 없어, 마디(눈)의 유무로 구별한다.',
+   keys:['뿌리','줄기','덩이줄기','눈','마디']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'건조한 곳에 사는 식물의 잎이 작고 두꺼운 경우가 많다. 그 까닭을 증산작용과 연결하여 설명하시오.',
+   model:'잎이 크고 얇으면 기공이 많아 증산작용으로 물이 많이 빠져나간다. 건조한 곳에서는 물이 부족하므로 잎을 작고 두껍게 하여 증산량을 줄이고 수분을 아끼는 것이다.',
+   keys:['기공','증산작용','수분','건조']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'어떤 식물의 꽃에 곤충이 한 마리도 찾아오지 않았다면 이후 어떤 일이 생길지 꽃가루받이와 열매 형성을 연결하여 설명하시오.',
+   model:'곤충이 오지 않으면 꽃가루받이가 일어나기 어려워 씨가 잘 만들어지지 않는다. 씨가 생기지 않으면 열매도 맺히지 않아 번식이 어려워진다.',
+   keys:['꽃가루받이','씨','열매','번식']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'잎이 다 떨어진 나무가 봄에 뿌리와 줄기에서 다시 잎을 내는 까닭을 식물 기관의 연결로 설명하시오.',
+   model:'뿌리가 물을 흡수하고 줄기가 이를 전달하며, 뿌리·줄기에 저장된 양분이 쓰여 새 잎이 돋는다. 기관들이 서로 물과 양분을 주고받기 때문에 다시 잎을 낼 수 있다.',
+   keys:['뿌리','줄기','양분','물']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'뿌리가 흡수한 물이 잎까지 어떻게 도달하는지 뿌리·줄기·잎의 연결 과정으로 설명하시오.',
+   model:'뿌리가 흙에서 물을 흡수하면, 그 물은 줄기 속 통로를 따라 위로 이동하여 잎에 도달한다. 잎에서는 그 물이 광합성에 쓰이거나 증산작용으로 빠져나간다. 이처럼 뿌리→줄기→잎으로 물이 이동한다.',
+   keys:['뿌리','줄기','잎','물','통로']}
+]},
+
+C:{label:'C형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'다음 중 세포에 대해 바르게 말한 것은?',
+   opts:['세포는 크기가 커서 현미경이 필요 없다.','한 종류의 세포만 존재한다.','생물을 이루는 기본 단위가 세포이다.','식물에는 세포가 들어 있지 않다.'],ans:3},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'뿌리의 기능으로 옳지 않은 것은?',
+   opts:['물을 흡수하는 일','식물을 지지하는 일','양분을 저장하는 일','씨를 만들어 퍼뜨리는 일'],ans:4},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'다음 중 줄기가 주로 하는 일은?',
+   opts:['씨를 보호한다.','물을 흡수해 저장만 한다.','물과 양분이 오가는 길 역할을 한다.','햇빛을 반사한다.'],ans:3},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'광합성이 일어나려면 반드시 있어야 하는 것은?',
+   opts:['빛, 산소, 흙','물, 질소, 산소','빛, 이산화탄소, 물','산소, 이산화탄소, 소금'],ans:3},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'꽃가루받이에 해당하는 것은?',
+   opts:['수술의 꽃가루가 암술로 옮겨지는 것','씨가 흙 속에서 싹트는 것','줄기가 물을 위로 올리는 것','잎이 물을 밖으로 내보내는 것'],ans:1},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'뿌리털이 식물에 주는 이로움으로 알맞은 것은?',
+   opts:['햇빛을 더 잘 받는다.','씨를 멀리 퍼뜨린다.','물 흡수 면적이 넓어져 흡수가 잘 된다.','꽃가루를 많이 만든다.'],ans:3},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'줄기에 대한 설명으로 옳은 것끼리 짝지은 것은?  ㉠ 물과 양분이 지나간다  ㉡ 식물을 받쳐 준다  ㉢ 스스로 꽃가루를 만든다  ㉣ 노폐물을 걸러 낸다',
+   opts:['㉠, ㉢','㉢, ㉣','㉠, ㉡','㉡, ㉣'],ans:3},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'다음 중 광합성에 대한 설명으로 옳은 것끼리 짝지은 것은?  ㉠ 주로 잎에서 일어난다  ㉡ 빛이 있어야 한다  ㉢ 산소를 내보낸다  ㉣ 주로 뿌리에서 일어난다',
+   opts:['㉠, ㉣','㉠, ㉡, ㉢','㉡, ㉣','㉢, ㉣'],ans:2},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'다음 중 증산작용에 대한 설명으로 옳은 것끼리 짝지은 것은?  ㉠ 잎에서 일어난다  ㉡ 물이 수증기 상태로 나간다  ㉢ 잎의 기공을 거친다  ㉣ 양분을 저장하는 작용이다',
+   opts:['㉠, ㉣','㉠, ㉡, ㉢','㉢, ㉣','㉡, ㉣'],ans:2},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'꽃가루가 가벼워 바람에 잘 날리는 식물의 꽃가루받이 방법으로 알맞은 것은?',
+   opts:['바람을 이용한다.','곤충을 이용한다.','물고기를 이용한다.','향기로 새를 부른다.'],ans:1},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'무는 뿌리이고 양파의 비늘 부분은 잎이다. 두 기관이 어떻게 다른지, 무엇을 보고 구별할 수 있는지 설명하시오.',
+   model:'무는 땅속에서 물을 흡수·저장하는 뿌리이고, 양파의 비늘잎은 양분을 저장한 잎이다. 뿌리는 물을 빨아들이고 잎은 양분을 저장·보호하는 기능 차이로 구별할 수 있다.',
+   keys:['뿌리','잎','양분','물']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'잎이 바늘처럼 가는 소나무가 메마른 곳에서도 잘 견디는 까닭을 증산작용과 연결하여 설명하시오.',
+   model:'잎이 바늘처럼 가늘면 잎의 겉넓이가 작아 기공을 통한 증산이 줄어든다. 그래서 물이 부족한 곳에서도 수분 손실을 줄여 잘 견딜 수 있다.',
+   keys:['기공','증산작용','수분 손실','겉넓이']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'꽃봉오리가 모두 떨어져 버린 식물은 그해에 열매를 맺기 어렵다. 그 까닭을 꽃의 역할과 연결하여 설명하시오.',
+   model:'꽃이 있어야 꽃가루받이를 거쳐 씨가 만들어지고, 씨를 둘러싼 부분이 자라 열매가 된다. 꽃이 없으면 이 과정이 시작되지 못해 열매를 맺기 어렵다.',
+   keys:['꽃','꽃가루받이','씨','열매']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'줄기를 잘라 물에 꽂아 두었더니 잘린 줄기에서 뿌리가 새로 나왔다. 이 현상을 기관의 연결 관계로 설명하시오.',
+   model:'줄기에는 양분과 물이 들어 있고 각 기관이 서로 기능을 보완하므로, 줄기만 있어도 물을 흡수할 새 뿌리를 내어 살아갈 수 있다. 이는 기관들이 연결되어 서로를 지원함을 보여 준다.',
+   keys:['줄기','뿌리','양분','물']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'잎에서 일어난 증산작용이 뿌리의 물 흡수와 어떻게 이어지는지 기관의 연결로 설명하시오.',
+   model:'잎에서 물이 수증기로 빠져나가면(증산), 그 힘으로 줄기 속 물이 위로 끌려 올라가고 뿌리는 흙에서 물을 더 흡수하게 된다. 이처럼 잎·줄기·뿌리가 물의 이동으로 연결되어 작동한다.',
+   keys:['증산작용','줄기','뿌리','물']}
+]}
+};
+
+const CAT_LABEL = { '사실적':'단일구조적', '적용적':'다중구조적', '전이적':'관계적' };
+const GROUP_LABEL = { '실험집단':'가', '통제집단':'나' };
+
+/* ══════════════════════════════════════════
+   GAS API 레이어
+   — API 키는 서버(GAS)에만 있음
+   — 클라이언트는 GAS_URL 만 알면 됨
+══════════════════════════════════════════ */
+async function gasPost(body) {
+  const res  = await fetch(GAS_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'text/plain' }, // GAS CORS 우회
+    body:    JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function gasGet(params) {
+  const qs  = new URLSearchParams(params).toString();
+  const res = await fetch(`${GAS_URL}?${qs}`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+// 중복 확인
+async function apiCheck(sid, tt) {
+  try { return (await gasGet({ action:'check', sid, tt })).exists; }
+  catch { return false; }
+}
+
+// 서술형 채점 요청 → GAS 서버에서 Anthropic API 호출
+async function apiGrade(questions, answers) {
+  return (await gasPost({ action:'grade', questions, answers })).grades;
+}
+
+// 결과 저장
+async function apiSave(result) {
+  return gasPost({ action:'save', ...result });
+}
+
+// 전체 결과 조회
+async function apiLoadAll() {
+  return (await gasGet({ action:'all' })).results;
+}
+
+/* ══════════════════════════════════════════
+   점수 계산
+══════════════════════════════════════════ */
+function calcScores(qs, answers, grades) {
+  const s = { 사실적:0, 적용적:0, 전이적:0 };
+  qs.forEach(q => {
+    const sc = q.type === 'mc'
+      ? (answers[q.id] === q.ans ? q.pts : 0)
+      : ((grades && grades[q.id]) ? grades[q.id].score : 0);
+    s[q.cat] += sc;
+  });
+  return { ...s, total: s.사실적 + s.적용적 + s.전이적 };
+}
+
+/* ══════════════════════════════════════════
+   엑셀 내보내기 공통: ID를 텍스트로 강제 처리
+   (Excel이 날짜/숫자로 자동 변환하는 것 방지)
+══════════════════════════════════════════ */
+function safeId(id) {
+  // 셀 타입을 문자열로 강제하기 위해 aoa_to_sheet 후 직접 셀 타입 지정
+  return id;
+}
+
+function applyTextCols(ws, textColIndices, startRow, rowCount) {
+  // 지정 열의 셀을 강제로 type:'s' (string)으로 변환
+  textColIndices.forEach(c => {
+    for (let r = startRow; r < startRow + rowCount; r++) {
+      const addr = XLSX.utils.encode_cell({r, c});
+      const cell = ws[addr];
+      if (cell && cell.v !== undefined && cell.v !== null && cell.v !== '') {
+        cell.t = 's';
+        cell.v = (cell.v instanceof Date) ? cell.v.toISOString() : String(cell.v);
+        cell.z = '@';
+      }
+    }
+  });
+}
+
+/* ── ① 기존: 총점/수준별 점수 내보내기 ── */
+function exportExcel(allResults, groupFilter, filename) {
+  const data = allResults.filter(r => !groupFilter || r.group === groupFilter);
+  if (!data.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const map = {};
+  data.forEach(r => {
+    if (!map[r.studentId]) map[r.studentId] = { ID:r.studentId, GRP:r.group };
+    map[r.studentId][r.testType] = r.scores;
+  });
+
+  const COL  = ['학생ID','집단','01_총점','01_단일구조적','01_다중구조적','01_관계적','02_총점','02_단일구조적','02_다중구조적','02_관계적','03_총점','03_단일구조적','03_다중구조적','03_관계적'];
+  const H1   = ['학생ID','집단','A형 문제','','','','B형 문제','','','','C형 문제','','',''];
+  const H2   = ['','','01_총점','01_단일구조적','01_다중구조적','01_관계적','02_총점','02_단일구조적','02_다중구조적','02_관계적','03_총점','03_단일구조적','03_다중구조적','03_관계적'];
+  const TMAP = { '01':'A','02':'B','03':'C' };
+  const CMAP = { '총점':'total','단일구조적':'사실적','다중구조적':'적용적','관계적':'전이적' };
+
+  const buildSheet = src => {
+    const sorted = Object.values(src).sort((a,b)=>a.ID.localeCompare(b.ID));
+    const rows = sorted.map(s =>
+      COL.map(c => {
+        if (c==='학생ID') return s.ID;
+        if (c==='집단')   return s.GRP;
+        const [p,cat] = c.split('_');
+        const sc = s[TMAP[p]];
+        return sc != null ? sc[CMAP[cat]] : '';
+      })
+    );
+    const ws = XLSX.utils.aoa_to_sheet([H1,H2,...rows]);
+    applyTextCols(ws, [0,1], 2, sorted.length); // 학생ID·집단 열 문자열 강제
+    ws['!cols']   = COL.map((_,i) => ({ wch: i<2?14:9 }));
+    ws['!merges'] = [
+      {s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},
+      {s:{r:0,c:2},e:{r:0,c:5}},{s:{r:0,c:6},e:{r:0,c:9}},{s:{r:0,c:10},e:{r:0,c:13}}
+    ];
+    return ws;
+  };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildSheet(map), groupFilter||'전체');
+  if (!groupFilter) {
+    ['실험집단','통제집단'].forEach(g => {
+      const gd = allResults.filter(r=>r.group===g);
+      if (!gd.length) return;
+      const gm = {};
+      gd.forEach(r=>{ if(!gm[r.studentId]) gm[r.studentId]={ID:r.studentId,GRP:r.group}; gm[r.studentId][r.testType]=r.scores; });
+      XLSX.utils.book_append_sheet(wb, buildSheet(gm), g);
+    });
+  }
+  XLSX.writeFile(wb, filename);
+}
+
+/* ── ② 문항별 점수 내보내기 (Cronbach's α용) ──
+   열: 학생ID, 집단, 검사형, Q01~Q15 각 문항 점수
+   선다형: 정답=배점(2점), 오답=0점
+   서술형: AI 채점 점수 (0~4점)
+*/
+function exportItemScores(allResults, filename) {
+  if (!allResults.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const wb = XLSX.utils.book_new();
+  const SHEETNAMES = { A:'A형_문항별', B:'B형_문항별', C:'C형_문항별' };
+  const CATLABEL   = { '사실적':'단', '적용적':'다', '전이적':'관' };
+
+  ['A','B','C'].forEach(tt => {
+    const recs = allResults.filter(r => r.testType === tt);
+    if (!recs.length) return;
+
+    const qs = EXAMS[tt] ? EXAMS[tt].qs : [];
+
+    // 헤더: 학생ID, 집단, 문1(사·2점), 문2(사·2점), ... 문15(전·4점), 총점
+    const header = ['학생ID', '집단',
+      ...qs.map(q => `문${q.id}(${CATLABEL[q.cat]}·${q.pts}점)`),
+      '총점'
+    ];
+
+    const rows = recs
+      .sort((a,b) => a.studentId.localeCompare(b.studentId))
+      .map(r => {
+        let total = 0;
+        const qScores = qs.map(q => {
+          let sc;
+          if (q.type === 'mc') {
+            sc = (r.answers && r.answers[q.id] === q.ans) ? q.pts : 0;
+          } else {
+            sc = (r.grades && r.grades[q.id] != null) ? r.grades[q.id].score : 0;
+          }
+          total += (sc || 0);
+          return sc;
+        });
+        return [r.studentId, r.group, ...qScores, total];
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...rows]);
+    applyTextCols(ws, [0,1], 1, rows.length);
+    ws['!cols'] = header.map((_,i) => ({ wch: i===0?14 : i===1?10 : i===header.length-1?7 : 9 }));
+
+    XLSX.utils.book_append_sheet(wb, ws, SHEETNAMES[tt]);
+  });
+
+  if (!wb.SheetNames.length) { alert('내보낼 데이터가 없습니다.'); return; }
+  XLSX.writeFile(wb, filename);
+}
+
+/* ── ③ 서술형 채점 신뢰도 내보내기 (Cohen's κ / ICC용) ──
+   열: 학생ID, 집단, 검사형, 문항번호, 문항내용, 학생답안, AI점수(0~4), [수동채점1], [수동채점2]
+   수동채점 열은 빈칸으로 내보내어 연구자가 직접 입력
+*/
+function exportEssayReliability(allResults, filename) {
+  if (!allResults.length) { alert('서술형 데이터가 없습니다.'); return; }
+
+  // 검사형별로 시트 분리 (A/B/C)
+  const wb = XLSX.utils.book_new();
+  const TESTLABELS = { A:'A형 문제', B:'B형 문제', C:'C형 문제' };
+
+  ['A','B','C'].forEach(tt => {
+    const recs = allResults.filter(r => r.testType === tt);
+    if (!recs.length) return;
+
+    // 해당 검사형의 서술형 문항 목록
+    const essayQs = EXAMS[tt] ? EXAMS[tt].qs.filter(q => q.type === 'essay') : [];
+    if (!essayQs.length) return;
+
+    // 헤더 행1: 학생ID, 집단, 검사형, 문11[병합], '', 문12[병합], '' ...  서술형합계_AI, 서술형합계_교사
+    // 헤더 행2: '', '', '', AI채점(1), 교사채점(2), AI채점(1), 교사채점(2) ...
+    const H1 = ['학생ID', '집단', '검사형'];
+    const H2 = ['', '', ''];
+    essayQs.forEach(q => {
+      H1.push(`문${q.id}`, '');
+      H2.push('AI채점(1)', '교사채점(2)');
+    });
+    H1.push('서술형합계_AI', '서술형합계_교사');
+    H2.push('', '');
+
+    // 데이터 행: 학생 1명 = 1행
+    const dataRows = recs
+      .sort((a,b) => a.studentId.localeCompare(b.studentId))
+      .map(r => {
+        const row = [r.studentId, r.group, tt];
+        let aiTotal = 0;
+        essayQs.forEach(q => {
+          const aiScore = (r.grades && r.grades[q.id] != null) ? r.grades[q.id].score : 0;
+          aiTotal += (aiScore || 0);
+          row.push(aiScore, ''); // AI채점, 교사채점(빈칸)
+        });
+        row.push(aiTotal, ''); // 서술형합계_AI, 서술형합계_교사(빈칸)
+        return row;
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet([H1, H2, ...dataRows]);
+
+    // 문항별 열 병합 (헤더 행1에서 AI채점·교사채점 2칸을 "문N"으로 병합)
+    const merges = [];
+    // 학생ID, 집단, 검사형 — 2행 병합
+    [0,1,2].forEach(c => merges.push({s:{r:0,c},e:{r:1,c}}));
+    // 문항별 2칸씩 병합
+    essayQs.forEach((_, i) => {
+      const c = 3 + i * 2;
+      merges.push({s:{r:0,c},e:{r:0,c:c+1}});
+    });
+    // 서술형합계 열들 — 2행 병합
+    const lastCols = [3 + essayQs.length * 2, 3 + essayQs.length * 2 + 1];
+    lastCols.forEach(c => merges.push({s:{r:0,c},e:{r:1,c}}));
+    ws['!merges'] = merges;
+
+    // 열 너비
+    const colWidths = [14, 10, 8];
+    essayQs.forEach(() => { colWidths.push(10, 10); });
+    colWidths.push(14, 14);
+    ws['!cols'] = colWidths.map(wch => ({wch}));
+
+    // 학생ID·집단·검사형 열 문자열 강제
+    applyTextCols(ws, [0,1,2], 2, dataRows.length);
+
+    XLSX.utils.book_append_sheet(wb, ws, TESTLABELS[tt]);
+  });
+
+  if (!wb.SheetNames.length) { alert('서술형 데이터가 없습니다.'); return; }
+  XLSX.writeFile(wb, filename);
+}
+
+/* ══════════════════════════════════════════
+   홈
+══════════════════════════════════════════ */
+function Home({ onStudent, onTeacher, showTeacher }) {
+  return (
+    <div style={{padding:'3rem 1.5rem',maxWidth:440,margin:'0 auto',textAlign:'center'}}>
+      <div style={{fontSize:60,marginBottom:16}}>🌿</div>
+      <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>식물의 구조와 기능</h1>
+      <p style={{fontSize:15,color:'#64748b',marginBottom:4}}>6학년 단원 문제 풀기</p>
+      <p style={{fontSize:13,color:'#94a3b8',marginBottom:40}}>「식물의 구조와 기능」 단원</p>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <button className="btn btn-green" style={{padding:'20px',fontSize:18,borderRadius:14}} onClick={onStudent}>문제 풀기</button>
+        {showTeacher && <button className="btn" style={{padding:'15px',fontSize:15}} onClick={onTeacher}>교사 결과 확인하기</button>}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   학생 로그인
+══════════════════════════════════════════ */
+function StudentLogin({ onNext, onBack }) {
+  const [sid, setSid]           = useState('');
+  const [group, setGroup]       = useState('');
+  const [testType, setTestType] = useState('');
+  const [msg, setMsg]           = useState('');
+  const [loading, setLoading]   = useState(false);
+
+  const go = async () => {
+    if (!sid.trim() || !group || !testType) { setMsg('모든 항목을 입력·선택하세요.'); return; }
+    setLoading(true); setMsg('서버 확인 중...');
+    const exists = await apiCheck(sid.trim(), testType);
+    if (exists) { setMsg('이미 제출된 검사입니다. 선생님께 문의하세요.'); setLoading(false); return; }
+    setLoading(false); setMsg('');
+    onNext({ studentId: sid.trim(), group, testType });
+  };
+
+  return (
+    <div className="page" style={{maxWidth:480,margin:'0 auto'}}>
+      <button className="btn" style={{marginBottom:24,fontSize:13}} onClick={onBack}>← 처음으로</button>
+      <h2 style={{fontSize:22,fontWeight:700,marginBottom:28}}>문제 풀기 시작</h2>
+      <div style={{marginBottom:20}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:8}}>학생 아이디</label>
+        <input type="text" placeholder="예: 6-1-01" value={sid} onChange={e=>{setSid(e.target.value);setMsg('');}} style={{fontSize:17}}/>
+      </div>
+      <div style={{marginBottom:20}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:10}}>우리 집단</label>
+        <div style={{display:'flex',gap:8}}>
+          {['실험집단','통제집단'].map(g=>(
+            <button key={g} className={`btn ${group===g?'btn-green':''}`} style={{flex:1,padding:'16px',fontSize:15}} onClick={()=>{setGroup(g);setMsg('');}}>
+              {GROUP_LABEL[g]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{marginBottom:32}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:10}}>검사 종류</label>
+        <div style={{display:'flex',gap:8}}>
+          {[['A','A형 문제'],['B','B형 문제'],['C','C형 문제']].map(([k,lb])=>(
+            <button key={k} className={`btn ${testType===k?'btn-blue':''}`} style={{flex:1,padding:'12px 4px',fontSize:14}} onClick={()=>{setTestType(k);setMsg('');}}>
+              <div style={{fontWeight:700}}>{k}형</div>
+              <div style={{fontSize:11,marginTop:3,opacity:0.8}}>{lb}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      {msg && <div style={{background:msg.includes('중')?'#f0fdf4':'#fef3c7',border:`1px solid ${msg.includes('중')?'#86efac':'#d97706'}`,borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:14,color:msg.includes('중')?'#166534':'#92400e'}}>{msg}</div>}
+      <button className="btn btn-green" style={{width:'100%',padding:'18px',fontSize:17}} onClick={go} disabled={loading}>
+        {loading ? '확인 중...' : '문제 풀기 시작 →'}
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   검사 인터페이스
+══════════════════════════════════════════ */
+function ExamInterface({ studentId, group, testType, onDone }) {
+  const exam   = EXAMS[testType];
+  const qs     = exam.qs;
+  const [idx, setIdx]         = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [grading, setGrading] = useState(false);
+  const [prog, setProg]       = useState(0);
+  const [progMsg, setProgMsg] = useState('');
+  const q      = qs[idx];
+  const mcDone = qs.filter(q=>q.type==='mc').every(q=>answers[q.id]!==undefined);
+  const setAns = (qid, val) => setAnswers(prev=>({...prev,[qid]:val}));
+
+  const submit = async () => {
+    setGrading(true);
+
+    // 1) 서술형 채점 요청 → GAS 서버가 Anthropic 호출
+    const essayQs = qs.filter(x=>x.type==='essay');
+    const essayAnswers = {};
+    essayQs.forEach(q => { essayAnswers[q.id] = answers[q.id] || ''; });
+
+    setProg(10); setProgMsg('서술형 AI 채점 중... (서버 처리)');
+    let grades = {};
+    try {
+      grades = await apiGrade(
+        essayQs.map(q=>({id:q.id, q:q.q, model:q.model, keys:q.keys})),
+        essayAnswers
+      );
+    } catch (err) {
+      console.error('채점 오류:', err);
+      essayQs.forEach(q => { grades[q.id] = { score:0, feedback:'채점 오류' }; });
+    }
+
+    // 2) 점수 계산
+    setProg(70); setProgMsg('점수 집계 중...');
+    const scores = calcScores(qs, answers, grades);
+
+    // 3) 저장
+    setProg(85); setProgMsg('Google Sheets에 저장 중...');
+    try {
+      await apiSave({ studentId, group, testType, examLabel:exam.label, scores, answers, grades, timestamp:Date.now() });
+    } catch (err) {
+      console.error('저장 오류:', err);
+    }
+
+    setProg(100); setProgMsg('완료!');
+    await new Promise(r=>setTimeout(r,500));
+    setGrading(false);
+    onDone();
+  };
+
+  if (grading) return (
+    <div style={{padding:'4rem 2rem',maxWidth:400,margin:'0 auto',textAlign:'center'}}>
+      <div style={{fontSize:44,marginBottom:18}}>⏳</div>
+      <h2 style={{fontSize:20,fontWeight:700,marginBottom:10}}>채점 중입니다</h2>
+      <p style={{fontSize:14,color:'#64748b',marginBottom:28}}>{progMsg}</p>
+      <div className="progress-bar" style={{marginBottom:10}}><div className="progress-fill" style={{width:`${prog}%`}}/></div>
+      <p style={{fontSize:13,color:'#94a3b8'}}>{prog}%</p>
+    </div>
+  );
+
+  return (
+    <div style={{padding:'1rem',maxWidth:560,margin:'0 auto'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,padding:'0 0.5rem'}}>
+        <span style={{fontSize:13,color:'#64748b'}}>{exam.label}</span>
+        <span style={{fontSize:13,color:'#64748b',fontWeight:600}}>{idx+1} / {qs.length}</span>
+      </div>
+      <div className="progress-bar" style={{marginBottom:20}}><div className="progress-fill" style={{width:`${((idx+1)/qs.length)*100}%`}}/></div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+          <span style={{fontSize:16,fontWeight:700}}>{idx+1}번</span>
+          <span className={`badge badge-${q.cat}`}>{CAT_LABEL[q.cat]} 이해</span>
+          <span style={{marginLeft:'auto',fontSize:13,color:'#64748b',fontWeight:600}}>{q.pts}점</span>
+        </div>
+        <p style={{fontSize:15,lineHeight:1.8,marginBottom:q.type==='mc'?18:14,color:'#1e293b'}}>{q.q}</p>
+        {q.type==='mc' && q.opts.map((o,i)=>(
+          <button key={i} className={`opt-btn ${answers[q.id]===(i+1)?'selected':''}`} onClick={()=>setAns(q.id,i+1)}>
+            <span style={{fontWeight:700,marginRight:10,fontSize:16}}>{'①②③④'[i]}</span>{o}
+          </button>
+        ))}
+        {q.type==='essay' && (
+          <>
+            <div style={{background:'#ede9fe',border:'1px solid #7c3aed',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#4c1d95'}}>
+              ★ 알고 있는 것을 자유롭게 서술하세요 (최대 4점)
+            </div>
+            <textarea rows={6} placeholder="여기에 답을 쓰세요..." value={answers[q.id]||''} onChange={e=>setAns(q.id,e.target.value)}/>
+          </>
+        )}
+      </div>
+
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <button className="btn" style={{flex:1,padding:'14px'}} onClick={()=>setIdx(i=>i-1)} disabled={idx===0}>← 이전</button>
+        {idx < qs.length-1
+          ? <button className="btn btn-green" style={{flex:1,padding:'14px'}} onClick={()=>setIdx(i=>i+1)}>다음 →</button>
+          : <button className="btn btn-green" style={{flex:1,padding:'14px'}} onClick={submit} disabled={!mcDone}>제출하기 ✓</button>
+        }
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:5,padding:'0 0.25rem'}}>
+        {qs.map((qq,i)=>{
+          const done = answers[qq.id]!==undefined && answers[qq.id]!=='';
+          return (
+            <button key={i} onClick={()=>setIdx(i)}
+              style={{width:34,height:34,borderRadius:7,fontSize:12,cursor:'pointer',fontWeight:600,
+                border:`2px solid ${i===idx?'#22c55e':done?'#86efac':'#e2e8f0'}`,
+                background:i===idx?'#dcfce7':done?'#f0fdf4':'#fff',
+                color:i===idx?'#052e16':done?'#16a34a':'#64748b'}}>
+              {i+1}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   학생 완료 (점수 없음)
+══════════════════════════════════════════ */
+function StudentDone() {
+  return (
+    <div style={{padding:'5rem 2rem',maxWidth:400,margin:'0 auto',textAlign:'center'}}>
+      <div style={{width:80,height:80,borderRadius:'50%',background:'#dcfce7',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',fontSize:36,color:'#16a34a'}}>✓</div>
+      <h2 style={{fontSize:24,fontWeight:700,marginBottom:14,color:'#052e16'}}>검사 제출 완료!</h2>
+      <p style={{fontSize:16,color:'#475569',lineHeight:1.8}}>수고했습니다.<br/>선생님께 완료 사실을 알려주세요.</p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   교사 대시보드
+══════════════════════════════════════════ */
+function TeacherDashboard({ onBack }) {
+  const [selGroup, setSelGroup]   = useState('실험집단');
+  const [selTest, setSelTest]     = useState('A');
+  const [all, setAll]             = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [loadErr, setLoadErr]     = useState('');
+  const [detailId, setDetailId]   = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [checked, setChecked]     = useState({});
+  const [deleting, setDeleting]   = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const results = await apiLoadAll();
+      setAll(results); setLoadErr('');
+    } catch (err) { setLoadErr('로드 실패: ' + err.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(()=>{ loadData(); const t=setInterval(loadData,10000); return()=>clearInterval(t); },[loadData]);
+
+  const filtered = all.filter(r=>r.group===selGroup && r.testType===selTest);
+  const avg = (arr,fn) => { if(!arr.length) return '-'; return (arr.reduce((a,r)=>a+fn(r),0)/arr.length).toFixed(1); };
+  const doExport = (gf,fn) => { setExporting(true); setTimeout(()=>{exportExcel(all,gf,fn);setExporting(false);},100); };
+
+  // 체크박스 key: studentId + '_' + testType
+  const ck = (r) => r.studentId + '_' + r.testType;
+  const toggleCheck = (r) => setChecked(prev=>({...prev,[ck(r)]:!prev[ck(r)]}));
+  const toggleAll   = () => {
+    const allChecked = filtered.every(r=>checked[ck(r)]);
+    const next = {};
+    filtered.forEach(r=>{ next[ck(r)] = !allChecked; });
+    setChecked(prev=>({...prev,...next}));
+  };
+  const checkedList  = filtered.filter(r=>checked[ck(r)]);
+  const allChecked   = filtered.length>0 && filtered.every(r=>checked[ck(r)]);
+
+  // 선택 항목 삭제
+  const deleteChecked = async () => {
+    if (!checkedList.length) { alert('삭제할 항목을 먼저 체크하세요.'); return; }
+    const names = checkedList.map(r=>`${r.studentId} (${r.testType}형)`).join('\n');
+    const ok = window.confirm(`아래 검사 결과를 삭제합니다.\n삭제 후 복구가 불가능합니다.\n\n${names}`);
+    if (!ok) return;
+    setDeleting(true);
+    setLoadErr('');
+    try {
+      const items = checkedList.map(r=>({ studentId: r.studentId, testType: r.testType }));
+      const res = await fetch(GAS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body:    JSON.stringify({ action: 'delete', items }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '서버에서 삭제 실패');
+      setChecked({});
+      await loadData();
+      alert(`${data.deleted || checkedList.length}건 삭제 완료`);
+    } catch(err) {
+      setLoadErr('삭제 오류: ' + err.message);
+      alert('삭제 오류: ' + err.message);
+    }
+    setDeleting(false);
+  };
+
+  if (loading) return (
+    <div style={{padding:'4rem',textAlign:'center',color:'#64748b'}}>
+      <div style={{fontSize:36,marginBottom:12}}>⏳</div>
+      <p>Google Sheets에서 데이터 불러오는 중...</p>
+    </div>
+  );
+
+  /* 상세 */
+  if (detailId) {
+    const detail = all.find(r=>r.studentId===detailId && r.testType===selTest);
+    if (!detail) return <div className="page"><button className="btn" onClick={()=>setDetailId(null)}>← 뒤로</button></div>;
+    const qs = EXAMS[selTest].qs;
+    return (
+      <div className="page" style={{maxWidth:640,margin:'0 auto'}}>
+        <button className="btn" style={{marginBottom:16,fontSize:13}} onClick={()=>setDetailId(null)}>← 목록으로</button>
+        <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:20,flexWrap:'wrap'}}>
+          <h2 style={{fontSize:20,fontWeight:700}}>{detail.studentId}</h2>
+          <span className="badge" style={{background:'#dcfce7',color:'#166534'}}>{detail.group}</span>
+          <span className="badge badge-사실적">{detail.examLabel}</span>
+          <span style={{fontSize:12,color:'#94a3b8',marginLeft:'auto'}}>{detail.timestamp?new Date(detail.timestamp).toLocaleString('ko-KR'):''}</span>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10,marginBottom:24}}>
+          {[['총점',detail.scores.total,40,'#dcfce7','#166534'],['단일구조적',detail.scores.사실적,10,'#dbeafe','#1e40af'],['다중구조적',detail.scores.적용적,10,'#fef3c7','#92400e'],['관계적',detail.scores.전이적,20,'#ede9fe','#4c1d95']].map(([lb,sc,mx,bg,tc])=>(
+            <div key={lb} style={{background:bg,borderRadius:10,padding:'12px 8px',textAlign:'center'}}>
+              <div style={{fontSize:12,color:tc,marginBottom:4,fontWeight:600}}>{lb}</div>
+              <div style={{fontSize:22,fontWeight:700,color:tc}}>{sc}<span style={{fontSize:12,fontWeight:400}}>/{mx}</span></div>
+            </div>
+          ))}
+        </div>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>선다형 (1~10번)</h3>
+        <div style={{overflowX:'auto',marginBottom:24}}>
+          <table>
+            <thead><tr><th>번호</th><th>영역</th><th>학생 답</th><th>정답</th><th style={{textAlign:'center'}}>점수</th></tr></thead>
+            <tbody>
+              {qs.filter(q=>q.type==='mc').map(q=>{
+                const ok = detail.answers[q.id]===q.ans;
+                return <tr key={q.id}><td style={{fontWeight:600}}>{q.id}번</td><td><span className={`badge badge-${q.cat}`} style={{fontSize:11}}>{CAT_LABEL[q.cat]}</span></td><td>{detail.answers[q.id]?'①②③④'[(detail.answers[q.id]||1)-1]:'-'}</td><td style={{fontWeight:600}}>{'①②③④'[q.ans-1]}</td><td style={{textAlign:'center',fontWeight:700,color:ok?'#16a34a':'#dc2626'}}>{ok?q.pts:0}점</td></tr>;
+              })}
+            </tbody>
+          </table>
+        </div>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>서술형 (11~15번) — AI 채점 결과</h3>
+        {qs.filter(q=>q.type==='essay').map(q=>{
+          const g = detail.grades&&detail.grades[q.id];
+          const sc = g?g.score:0;
+          const col=['#dc2626','#ea580c','#ca8a04','#16a34a','#059669'][sc];
+          return (
+            <div key={q.id} className="card" style={{marginBottom:12}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <span style={{fontSize:14,fontWeight:700}}>{q.id}번</span>
+                <span className="badge badge-전이적">관계적</span>
+                <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',background:col,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:16}}>{sc}</div>
+                  <span style={{fontSize:13,color:'#64748b'}}>/4점</span>
+                </div>
+              </div>
+              <div style={{fontSize:13,background:'#f8fafc',borderRadius:8,padding:'10px 12px',marginBottom:8,lineHeight:1.7,border:'1px solid #e2e8f0'}}>
+                <div style={{fontSize:11,color:'#94a3b8',marginBottom:4,fontWeight:600}}>학생 답안</div>
+                {detail.answers[q.id]||<span style={{color:'#94a3b8',fontStyle:'italic'}}>무응답</span>}
+              </div>
+              {g&&<div style={{fontSize:12,color:'#4c1d95',background:'#ede9fe',borderRadius:6,padding:'8px 12px'}}><span style={{fontWeight:600}}>AI 피드백</span>: {g.feedback}</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  /* 메인 */
+  return (
+    <div className="page" style={{maxWidth:780,margin:'0 auto'}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+        <button className="btn" style={{fontSize:13}} onClick={onBack}>← 처음으로</button>
+        <button className="btn" style={{fontSize:13,background:'#f0fdf4',borderColor:'#86efac',color:'#166534'}} onClick={loadData}>↻ 새로고침</button>
+        {loadErr&&<span style={{fontSize:12,color:'#dc2626'}}>{loadErr}</span>}
+      </div>
+      <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>교사 결과 대시보드</h2>
+
+      {/* ── 수준별 총점 내보내기 ── */}
+      <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:12,padding:'16px 18px',marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#166534',marginBottom:12}}>엑셀 내보내기 — 학생 1명 = 1행 (수준별 총점)</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+          <button className="btn btn-excel" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport('실험집단','개념이해도_실험집단.xlsx')} disabled={exporting}>↓ 실험집단</button>
+          <button className="btn btn-excel" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport('통제집단','개념이해도_통제집단.xlsx')} disabled={exporting}>↓ 통제집단</button>
+          <button className="btn btn-excel2" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport(null,'개념이해도_전체.xlsx')} disabled={exporting}>↓ 전체 (집단별 시트)</button>
+        </div>
+        <div style={{fontSize:11,color:'#4d7c0f',lineHeight:1.8}}>
+          열 구성: 학생ID · 집단 ·
+          <span style={{background:'#bbf7d0',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>01_총점 · 01_단일구조적 · 01_다중구조적 · 01_관계적</span>
+          <span style={{background:'#fef08a',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>02_총점 · 02_단일구조적 · 02_다중구조적 · 02_관계적</span>
+          <span style={{background:'#ddd6fe',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>03_총점 · 03_단일구조적 · 03_다중구조적 · 03_관계적</span>
+        </div>
+      </div>
+
+      {/* ── 문항별 점수 내보내기 (Cronbach's α용) ── */}
+      <div style={{background:'#eff6ff',border:'1px solid #93c5fd',borderRadius:12,padding:'16px 18px',marginBottom:14}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#1e40af',marginBottom:8}}>문항별 점수 내보내기 — 내적 타당도 (Cronbach's α)용</div>
+        <div style={{fontSize:11,color:'#1e3a8a',marginBottom:12,lineHeight:1.7}}>
+          열 구성: 학생ID · 집단 · 검사형 · Q01~Q15 문항별 점수<br/>
+          선다형 정답=배점(2점) / 오답=0점 &nbsp;|&nbsp; 서술형 AI채점 점수(0~4점)
+        </div>
+        <button className="btn btn-blue" style={{fontSize:13,padding:'10px 20px'}}
+          onClick={()=>{ setExporting(true); setTimeout(()=>{ exportItemScores(all,'개념이해도_문항별점수.xlsx'); setExporting(false); },100); }}
+          disabled={exporting}>
+          ↓ 전체 문항별 점수 (α용)
+        </button>
+      </div>
+
+      {/* ── 서술형 채점 신뢰도 내보내기 (Cohen's κ / ICC용) ── */}
+      <div style={{background:'#faf5ff',border:'1px solid #c4b5fd',borderRadius:12,padding:'16px 18px',marginBottom:24}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#4c1d95',marginBottom:8}}>서술형 채점 신뢰도 내보내기 — Cohen's κ / ICC용</div>
+        <div style={{fontSize:11,color:'#4c1d95',marginBottom:12,lineHeight:1.7}}>
+          열 구성: 학생ID · 집단 · 검사형 · 문항번호 · 문항내용 · 학생답안 · AI점수(0~4) · AI피드백 · 수동채점1 · 수동채점2<br/>
+          수동채점 열은 빈칸 — 연구자가 직접 입력 후 SPSS/R에서 κ·ICC 산출
+        </div>
+        <button className="btn btn-purple" style={{fontSize:13,padding:'10px 20px'}}
+          onClick={()=>{ setExporting(true); setTimeout(()=>{ exportEssayReliability(all,'서술형채점신뢰도.xlsx'); setExporting(false); },100); }}
+          disabled={exporting}>
+          ↓ 서술형 채점 신뢰도 (κ·ICC용)
+        </button>
+      </div>
+
+      <div style={{display:'flex',gap:8,marginBottom:14}}>
+        {['실험집단','통제집단'].map(g=>(
+          <button key={g} className={`btn ${selGroup===g?'btn-green':''}`} style={{flex:1,padding:'14px',fontSize:15,fontWeight:selGroup===g?700:400}} onClick={()=>setSelGroup(g)}>{GROUP_LABEL[g]}</button>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:8,marginBottom:20}}>
+        {[['A','A형 문제','btn-blue'],['B','B형 문제','btn-amber'],['C','C형 문제','btn-purple']].map(([k,lb,bc])=>(
+          <button key={k} className={`btn ${selTest===k?bc:''}`} style={{flex:1,padding:'11px 4px',fontSize:14}} onClick={()=>setSelTest(k)}>
+            <div style={{fontWeight:700}}>{k}형</div><div style={{fontSize:11,marginTop:3,opacity:0.8}}>{lb}</div>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length>0&&(
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+          {[['응시 인원',`${filtered.length}명`,'#dcfce7','#166534'],['총점 평균',avg(filtered,r=>r.scores.total),'#dbeafe','#1e40af'],['단일구조적 평균',avg(filtered,r=>r.scores.사실적),'#fef3c7','#92400e'],['다중구조적 평균',avg(filtered,r=>r.scores.적용적),'#fef3c7','#92400e'],['관계적 평균',avg(filtered,r=>r.scores.전이적),'#ede9fe','#4c1d95']].map(([lb,val,bg,tc])=>(
+            <div key={lb} style={{background:bg,borderRadius:8,padding:'6px 14px',fontSize:13,color:tc,fontWeight:600}}>{lb}: {val}</div>
+          ))}
+        </div>
+      )}
+
+      {filtered.length===0 ? (
+        <div style={{textAlign:'center',padding:'4rem 2rem',color:'#94a3b8',background:'#f8fafc',borderRadius:14,border:'1px dashed #e2e8f0'}}>
+          <div style={{fontSize:36,marginBottom:12}}>📋</div>
+          <p style={{fontSize:15}}>{selGroup}의 {EXAMS[selTest].label} 결과가 아직 없습니다.</p>
+        </div>
+      ) : (
+        <>
+          {/* 삭제 툴바 */}
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10,padding:'10px 12px',background:checkedList.length?'#fef2f2':'#f8fafc',borderRadius:8,border:`1px solid ${checkedList.length?'#fca5a5':'#e2e8f0'}`}}>
+            <span style={{fontSize:13,color:'#475569'}}>
+              {checkedList.length>0 ? `${checkedList.length}개 선택됨` : '행을 선택하면 삭제할 수 있습니다'}
+            </span>
+            <button
+              style={{marginLeft:'auto',padding:'6px 16px',borderRadius:7,border:'1px solid #fca5a5',background:checkedList.length?'#dc2626':'#f1f5f9',color:checkedList.length?'#fff':'#94a3b8',fontWeight:600,fontSize:13,cursor:checkedList.length?'pointer':'not-allowed',fontFamily:'inherit'}}
+              onClick={deleteChecked}
+              disabled={!checkedList.length||deleting}
+            >
+              {deleting ? '삭제 중...' : '🗑 선택 삭제'}
+            </button>
+          </div>
+
+          <div style={{overflowX:'auto'}}>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{textAlign:'center',width:36}}>
+                    <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{width:15,height:15,cursor:'pointer'}}/>
+                  </th>
+                  <th>학생 ID</th>
+                  <th style={{textAlign:'center',color:'#1e40af'}}>단일구조적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/10</span></th>
+                  <th style={{textAlign:'center',color:'#92400e'}}>다중구조적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/10</span></th>
+                  <th style={{textAlign:'center',color:'#4c1d95'}}>관계적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/20</span></th>
+                  <th style={{textAlign:'center',background:'#f0fdf4',color:'#166534'}}>총점<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/40</span></th>
+                  <th style={{textAlign:'center'}}>제출 시각</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.sort((a,b)=>a.studentId.localeCompare(b.studentId)).map(r=>(
+                  <tr key={r.studentId} style={{background:checked[ck(r)]?'#fef2f2':''}}>
+                    <td style={{textAlign:'center'}}>
+                      <input type="checkbox" checked={!!checked[ck(r)]} onChange={()=>toggleCheck(r)} style={{width:15,height:15,cursor:'pointer'}}/>
+                    </td>
+                    <td style={{fontWeight:700}}>{r.studentId}</td>
+                    <td className="sc" style={{color:'#1e40af'}}>{r.scores.사실적}</td>
+                    <td className="sc" style={{color:'#92400e'}}>{r.scores.적용적}</td>
+                    <td className="sc" style={{color:'#4c1d95'}}>{r.scores.전이적}</td>
+                    <td className="sc" style={{fontWeight:700,background:'#f0fdf4',color:'#166534'}}>{r.scores.total}</td>
+                    <td style={{fontSize:12,color:'#94a3b8',textAlign:'center'}}>{r.timestamp?new Date(r.timestamp).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-'}</td>
+                    <td><button className="btn" style={{padding:'5px 12px',fontSize:12}} onClick={()=>setDetailId(r.studentId)}>상세보기</button></td>
+                  </tr>
+                ))}
+                {filtered.length>1&&(
+                  <tr style={{background:'#f8fafc',fontWeight:700}}>
+                    <td></td>
+                    <td style={{color:'#475569',fontSize:12}}>평균</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.사실적)}</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.적용적)}</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.전이적)}</td>
+                    <td className="sc" style={{color:'#16a34a'}}>{avg(filtered,r=>r.scores.total)}</td>
+                    <td></td><td></td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <p style={{fontSize:11,color:'#94a3b8',textAlign:'center',marginTop:20}}>10초마다 자동 갱신 | 저장소: Google Sheets</p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   교사 비밀번호 입력 화면
+══════════════════════════════════════════ */
+function TeacherLogin({ onSuccess, onBack }) {
+  const [pw, setPw]       = useState('');
+  const [err, setErr]     = useState('');
+  const [show, setShow]   = useState(false);
+
+  const check = () => {
+    if (pw === TEACHER_PASSWORD) {
+      onSuccess();
+    } else {
+      setErr('비밀번호가 틀렸습니다. 다시 입력해 주세요.');
+      setPw('');
+    }
+  };
+
+  const onKey = (e) => { if (e.key === 'Enter') check(); };
+
+  return (
+    <div style={{padding:'3rem 1.5rem',maxWidth:400,margin:'0 auto'}}>
+      <button className="btn" style={{marginBottom:28,fontSize:13}} onClick={onBack}>← 처음으로</button>
+
+      <div style={{textAlign:'center',marginBottom:32}}>
+        <div style={{width:64,height:64,borderRadius:'50%',background:'#dbeafe',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',fontSize:28}}>🔒</div>
+        <h2 style={{fontSize:22,fontWeight:700,marginBottom:6}}>교사 전용</h2>
+        <p style={{fontSize:14,color:'#64748b'}}>비밀번호를 입력하세요</p>
+      </div>
+
+      <div style={{position:'relative',marginBottom:16}}>
+        <input
+          type={show ? 'text' : 'password'}
+          placeholder="비밀번호 입력"
+          value={pw}
+          onChange={e=>{setPw(e.target.value);setErr('');}}
+          onKeyDown={onKey}
+          style={{fontSize:17,paddingRight:48}}
+          autoFocus
+        />
+        <button
+          onClick={()=>setShow(s=>!s)}
+          style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#94a3b8',padding:4}}
+        >
+          {show ? '🙈' : '👁️'}
+        </button>
+      </div>
+
+      {err && (
+        <div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:14,color:'#dc2626'}}>
+          {err}
+        </div>
+      )}
+
+      <button className="btn btn-blue" style={{width:'100%',padding:'16px',fontSize:17}} onClick={check}>
+        확인 →
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   앱 라우터
+══════════════════════════════════════════ */
+function App() {
+  const [view, setView]   = useState('home');
+  const [sInfo, setSInfo] = useState(null);
+  const reset = () => { setView('home'); setSInfo(null); };
+  // URL에 #teacher (또는 ?teacher)가 있을 때만 교사 버튼 노출
+  const showTeacher = (typeof window !== 'undefined') &&
+    (window.location.hash.indexOf('teacher') !== -1 ||
+     window.location.search.indexOf('teacher') !== -1);
+
+  if (view==='home')         return <Home onStudent={()=>setView('login')} onTeacher={()=>setView('teacher-login')} showTeacher={showTeacher}/>;
+  if (view==='login')        return <StudentLogin onBack={reset} onNext={info=>{setSInfo(info);setView('exam');}}/>;
+  if (view==='exam' && sInfo) return <ExamInterface {...sInfo} onDone={()=>setView('done')}/>;
+  if (view==='done')         return <StudentDone/>;
+  if (view==='teacher-login') return <TeacherLogin onBack={reset} onSuccess={()=>setView('teacher')}/>;
+  if (view==='teacher')      return <TeacherDashboard onBack={reset}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

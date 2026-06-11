@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>우리 몸의 구조와 기능 — 단원 문제 풀기</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:16px;color:#111;background:#f8f9fa;min-height:100vh}
+#root{max-width:780px;margin:0 auto;padding:0 0 80px}
+.btn{padding:10px 20px;border-radius:8px;border:1px solid rgba(0,0,0,0.18);background:#fff;color:#111;font-size:15px;cursor:pointer;transition:background 0.15s;font-family:inherit}
+.btn:hover{background:#f0f0f0}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+.btn-green{background:#4ade80;border-color:#22c55e;color:#052e16;font-weight:600}
+.btn-green:hover:not(:disabled){background:#22c55e}
+.btn-blue{background:#dbeafe;border-color:#3b82f6;color:#1e3a8a;font-weight:600}
+.btn-blue:hover:not(:disabled){background:#bfdbfe}
+.btn-amber{background:#fef3c7;border-color:#d97706;color:#78350f;font-weight:600}
+.btn-amber:hover:not(:disabled){background:#fde68a}
+.btn-purple{background:#ede9fe;border-color:#7c3aed;color:#2e1065;font-weight:600}
+.btn-purple:hover:not(:disabled){background:#ddd6fe}
+.btn-excel{background:#166534;border-color:#14532d;color:#fff;font-weight:600}
+.btn-excel:hover:not(:disabled){background:#14532d}
+.btn-excel2{background:#0f3d20;border-color:#0a2912;color:#fff;font-weight:600}
+.btn-excel2:hover:not(:disabled){background:#0a2912}
+.card{background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:12px;padding:1.25rem}
+.badge{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:600}
+.badge-사실적{background:#dbeafe;color:#1e40af}
+.badge-적용적{background:#fef3c7;color:#92400e}
+.badge-전이적{background:#ede9fe;color:#4c1d95}
+input[type=text],textarea{width:100%;padding:10px 12px;border:1px solid rgba(0,0,0,0.2);border-radius:8px;font-size:15px;color:#111;background:#fff;font-family:inherit;outline:none}
+input[type=text]:focus,textarea:focus{border-color:#4ade80;box-shadow:0 0 0 3px rgba(74,222,128,0.15)}
+textarea{resize:vertical;min-height:110px;line-height:1.7}
+.opt-btn{width:100%;text-align:left;padding:13px 16px;border-radius:8px;border:1.5px solid rgba(0,0,0,0.12);background:#fff;color:#111;font-size:15px;cursor:pointer;transition:all 0.15s;margin-bottom:8px;font-family:inherit;line-height:1.5}
+.opt-btn:hover{border-color:#4ade80;background:#f0fdf4}
+.opt-btn.selected{border-color:#22c55e;background:#f0fdf4;color:#052e16;font-weight:600}
+.progress-bar{height:6px;background:rgba(0,0,0,0.08);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:#4ade80;transition:width 0.3s ease}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:9px 12px;background:#f1f5f9;text-align:left;font-weight:600;border-bottom:1px solid #e2e8f0;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+tr:hover td{background:#fafafa}
+.sc{text-align:center;font-weight:600}
+.page{padding:1.5rem 1rem}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useEffect, useCallback} = React;
+
+/* ══════════════════════════════════════════
+   ★ Google Apps Script 배포 URL 입력
+     (API 키는 GAS 스크립트 속성에 보관)
+══════════════════════════════════════════ */
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxkfYlsE4bz56kNbXgYgefXlwlE52N-a8_SLclBWO0uSvH_hed9hvGpCBkDIDJshNz4lg/exec';
+
+/* ══════════════════════════════════════════
+   ★ 교사 비밀번호
+══════════════════════════════════════════ */
+const TEACHER_PASSWORD = 'teacher3409';
+
+/* ══════════════════════════════════════════
+   문항 데이터 — 5학년 「우리 몸의 구조와 기능」
+   A형 문제 / B형 문제 / C형 문제
+══════════════════════════════════════════ */
+const EXAMS = {
+A:{label:'A형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'뼈가 하는 일로 알맞은 것은?',
+   opts:['음식물을 잘게 쪼갠다.','몸의 형태를 만들고 몸을 지탱한다.','산소를 받아들인다.','노폐물을 걸러 낸다.'],ans:2},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'음식물을 잘게 쪼개 영양소를 몸속으로 흡수하는 기관은?',
+   opts:['호흡기관','순환기관','소화기관','배설기관'],ans:3},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'심장이 하는 일로 알맞은 것은?',
+   opts:['펌프 작용으로 혈액을 온몸으로 보낸다.','공기를 들이마신다.','음식물을 소화한다.','오줌을 만든다.'],ans:1},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'숨을 쉴 때 공기가 드나드는 곳으로 알맞은 것은?',
+   opts:['콩팥','코','위','방광'],ans:2},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'콩팥이 하는 일로 알맞은 것은?',
+   opts:['빛으로 양분을 만든다.','혈액 속의 노폐물을 걸러 내어 오줌을 만든다.','음식물을 씹는다.','뼈를 움직인다.'],ans:2},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'팔을 구부릴 때 일어나는 변화로 옳은 것은?',
+   opts:['팔 안쪽 근육이 줄어들고 바깥쪽 근육이 늘어난다.','팔 안쪽 근육이 늘어나고 바깥쪽 근육이 줄어든다.','두 근육이 모두 늘어난다.','두 근육이 모두 줄어든다.'],ans:1},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'음식물이 소화되며 이동하는 순서를 바르게 나타낸 것은?',
+   opts:['입 → 위 → 식도 → 큰창자 → 작은창자','입 → 식도 → 위 → 작은창자 → 큰창자','입 → 식도 → 큰창자 → 위 → 작은창자','입 → 위 → 작은창자 → 식도 → 큰창자'],ans:2},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'순환기관에 대한 설명으로 옳은 것을 바르게 묶은 것은?',
+   opts:['심장과 혈관으로 이루어지고, 혈액을 온몸으로 보낸다.','코와 폐로 이루어지고, 산소를 받아들인다.','콩팥과 방광으로 이루어지고, 오줌을 만든다.','입과 위로 이루어지고, 음식물을 소화한다.'],ans:1},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'숨을 들이마실 때 공기가 이동하는 경로로 옳은 것은?',
+   opts:['폐 → 숨관가지 → 숨관 → 코','코 → 숨관 → 숨관가지 → 폐','코 → 폐 → 숨관 → 숨관가지','숨관 → 코 → 폐 → 숨관가지'],ans:2},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'배설 과정에서 오줌이 이동하는 순서로 옳은 것은?',
+   opts:['방광 → 콩팥 → 오줌관','콩팥 → 오줌관 → 방광','오줌관 → 방광 → 콩팥','콩팥 → 방광 → 오줌관'],ans:2},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'운동을 하면 호흡이 빨라지고 심장이 빠르게 뛴다. 그 까닭을 뼈와 근육이 하는 일과 관련지어 설명하시오.',
+   model:'뼈와 근육이 움직이려면 산소와 영양소가 필요하다. 운동을 하면 더 많은 산소를 받아들이기 위해 호흡이 빨라지고, 산소와 영양소를 온몸에 빠르게 운반하기 위해 심장이 빠르게 뛴다.',
+   keys:['산소','영양소','호흡','심장','근육']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'음식물을 꼭꼭 씹어 먹으면 소화에 도움이 되는 까닭을 소화기관이 하는 일과 연결하여 설명하시오.',
+   model:'음식물을 잘게 씹으면 위와 작은창자에서 영양소를 흡수할 수 있도록 더 잘게 쪼개진다. 음식물이 잘게 쪼개질수록 영양소가 몸속으로 잘 흡수되므로 소화에 도움이 된다.',
+   keys:['소화기관','영양소','흡수','잘게']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'심장박동이 멈추었을 때 빠른 시간 안에 심폐 소생술을 해야 하는 까닭을 순환기관이 하는 일과 연결하여 설명하시오.',
+   model:'심장은 펌프 작용으로 혈액을 온몸에 보내 산소와 영양소를 운반한다. 심장이 멈추면 혈액이 돌지 못해 몸의 기관에 산소가 공급되지 않으므로, 빠르게 심폐 소생술을 하여 혈액이 다시 돌게 해야 한다.',
+   keys:['심장','혈액','산소','순환']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'운동을 심하게 한 뒤 숨이 가빠지는 까닭을 호흡기관과 순환기관의 관계로 설명하시오.',
+   model:'운동을 하면 근육이 산소를 많이 사용하므로 더 많은 산소가 필요하다. 그래서 호흡기관은 산소를 더 빨리 받아들이고, 순환기관은 그 산소를 온몸으로 빠르게 운반하기 위해 함께 빠르게 작용하여 숨이 가빠진다.',
+   keys:['산소','호흡기관','순환기관','근육']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'우리 몸의 여러 기관이 서로 영향을 주고받는다는 것을 소화·순환·호흡·배설기관을 예로 들어 설명하시오.',
+   model:'소화기관이 흡수한 영양소와 호흡기관이 받아들인 산소를 순환기관이 온몸에 운반하고, 이때 생긴 이산화 탄소는 호흡기관으로, 노폐물은 배설기관으로 운반되어 몸 밖으로 나간다. 이처럼 각 기관은 서로 연결되어 영향을 주고받으며 작용한다.',
+   keys:['소화기관','순환기관','호흡기관','배설기관','영양소','산소']}
+]},
+
+B:{label:'B형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'근육에 대한 설명으로 옳은 것은?',
+   opts:['음식물을 소화한다.','뼈에 연결되어 뼈를 움직이게 한다.','오줌을 만든다.','공기를 받아들인다.'],ans:2},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'혈액의 순환을 담당하는 기관은?',
+   opts:['소화기관','순환기관','호흡기관','배설기관'],ans:2},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'폐가 하는 일로 알맞은 것은?',
+   opts:['산소를 받아들이고 이산화 탄소를 내보낸다.','음식물을 잘게 부순다.','혈액을 온몸으로 보낸다.','오줌을 모아 둔다.'],ans:1},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'음식물 찌꺼기를 몸 밖으로 내보내는 소화기관은?',
+   opts:['입','위','항문','폐'],ans:3},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'방광이 하는 일로 알맞은 것은?',
+   opts:['오줌을 모아 두었다가 몸 밖으로 내보낸다.','혈액 속 노폐물을 걸러 낸다.','공기를 이동시킨다.','음식물을 소화한다.'],ans:1},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'팔을 펼 때 일어나는 변화로 옳은 것은?',
+   opts:['팔 안쪽 근육이 줄어들고 바깥쪽 근육이 늘어난다.','팔 바깥쪽 근육이 줄어들고 안쪽 근육이 늘어난다.','두 근육이 모두 줄어든다.','두 근육이 모두 늘어난다.'],ans:2},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'소화를 도와주는 기관끼리 바르게 묶은 것은?',
+   opts:['간, 쓸개, 이자','코, 숨관, 폐','심장, 혈관','콩팥, 오줌관, 방광'],ans:1},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'혈액이 하는 일에 대한 설명으로 옳은 것을 바르게 묶은 것은?',
+   opts:['영양소와 산소를 온몸에 운반하고, 이산화 탄소와 노폐물을 옮긴다.','음식물을 소화하고, 영양소를 만든다.','빛을 받아 양분을 만든다.','공기를 직접 들이마신다.'],ans:1},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'숨을 내쉴 때 공기가 이동하는 경로로 옳은 것은?',
+   opts:['코 → 숨관 → 숨관가지 → 폐','폐 → 숨관가지 → 숨관 → 코','폐 → 코 → 숨관 → 숨관가지','숨관 → 폐 → 코 → 숨관가지'],ans:2},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'배설기관에서 노폐물이 처리되는 과정으로 옳은 것은?',
+   opts:['콩팥이 노폐물을 걸러 오줌을 만들고, 오줌은 오줌관을 지나 방광에 모인다.','방광이 노폐물을 걸러 콩팥으로 보낸다.','오줌관이 노폐물을 걸러 폐로 보낸다.','콩팥이 오줌을 모았다가 내보낸다.'],ans:1},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'운동을 하면 체온이 올라가고 땀이 난다. 이러한 변화가 일어나는 까닭을 뼈와 근육이 하는 일과 관련지어 설명하시오.',
+   model:'운동을 하면 뼈와 근육이 산소와 영양소를 사용해 활발히 움직이면서 열이 많이 난다. 그래서 체온이 올라가고, 몸은 올라간 체온을 낮추기 위해 땀을 내보낸다.',
+   keys:['뼈','근육','체온','땀']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'소화기관이 음식물을 잘게 쪼개는 일을 하는 까닭을 영양소 흡수와 연결하여 설명하시오.',
+   model:'음식물 속의 영양소는 잘게 쪼개져야 몸속으로 흡수될 수 있다. 소화기관이 음식물을 잘게 쪼개기 때문에 위와 작은창자에서 영양소와 수분을 몸속으로 흡수할 수 있다.',
+   keys:['영양소','흡수','소화기관','잘게']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'심장에서 나온 혈액이 다시 심장으로 돌아오는 과정을 순환기관이 하는 일과 연결하여 설명하시오.',
+   model:'심장이 펌프 작용으로 혈액을 내보내면, 혈액은 혈관을 따라 온몸을 돌며 영양소와 산소를 전달하고 다시 심장으로 돌아온다. 순환기관은 이 과정을 반복하여 혈액이 끊임없이 온몸을 순환하게 한다.',
+   keys:['심장','혈액','혈관','순환']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'운동할 때 호흡이 빨라지면 산소를 더 많이 받아들일 수 있는 까닭을 호흡기관과 순환기관의 관계로 설명하시오.',
+   model:'호흡기관은 공기 속의 산소를 받아들이고, 순환기관은 그 산소를 온몸으로 운반한다. 운동할 때 호흡이 빨라지면 폐가 더 많은 산소를 받아들이고, 순환기관이 이를 온몸에 빠르게 운반하여 근육이 산소를 충분히 사용할 수 있다.',
+   keys:['산소','호흡기관','순환기관','폐']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'음식을 먹고 운동을 하는 동안 소화·순환·뼈와 근육이 어떻게 서로 도움을 주고받는지 설명하시오.',
+   model:'소화기관이 음식물에서 영양소를 흡수하면, 순환기관이 그 영양소와 산소를 온몸에 운반한다. 운반된 영양소와 산소를 뼈와 근육이 사용하여 몸을 움직인다. 이처럼 각 기관은 서로 연결되어 도움을 주고받으며 작용한다.',
+   keys:['소화기관','순환기관','영양소','뼈','근육']}
+]},
+
+C:{label:'C형 문제', qs:[
+  {id:1,cat:'사실적',type:'mc',pts:2,
+   q:'우리 몸을 지탱하고 형태를 만드는 것은?',
+   opts:['혈액','뼈','오줌','공기'],ans:2},
+  {id:2,cat:'사실적',type:'mc',pts:2,
+   q:'숨을 들이마시고 내쉬는 활동을 담당하는 기관은?',
+   opts:['소화기관','순환기관','호흡기관','배설기관'],ans:3},
+  {id:3,cat:'사실적',type:'mc',pts:2,
+   q:'혈관이 하는 일로 알맞은 것은?',
+   opts:['혈액이 이동하는 통로 역할을 한다.','음식물을 소화한다.','오줌을 만든다.','공기를 받아들인다.'],ans:1},
+  {id:4,cat:'사실적',type:'mc',pts:2,
+   q:'혈액 속의 노폐물을 걸러 내어 오줌을 만드는 기관은?',
+   opts:['폐','콩팥','위','심장'],ans:2},
+  {id:5,cat:'사실적',type:'mc',pts:2,
+   q:'코로 들이마신 공기가 폐로 가기 전에 지나는 통로로 알맞은 것은?',
+   opts:['오줌관','숨관','식도','혈관'],ans:2},
+  {id:6,cat:'적용적',type:'mc',pts:2,
+   q:'뼈와 근육이 함께 작용하여 몸이 움직이는 원리로 옳은 것은?',
+   opts:['근육이 줄어들거나 늘어나면서 뼈를 움직여 몸이 움직인다.','뼈가 스스로 늘어나면서 움직인다.','혈액이 뼈를 직접 움직인다.','공기가 근육을 움직인다.'],ans:1},
+  {id:7,cat:'적용적',type:'mc',pts:2,
+   q:'소화기관이 하는 일을 바르게 묶은 것은?',
+   opts:['음식물을 잘게 쪼개고, 영양소와 수분을 몸속으로 흡수한다.','산소를 받아들이고, 이산화 탄소를 내보낸다.','혈액을 온몸으로 보내고, 노폐물을 거른다.','오줌을 만들고, 몸 밖으로 내보낸다.'],ans:1},
+  {id:8,cat:'적용적',type:'mc',pts:2,
+   q:'운동을 할 때 우리 몸에서 일어나는 변화로 옳은 것을 바르게 묶은 것은?',
+   opts:['호흡이 빨라지고, 심장이 빠르게 뛰며, 체온이 올라간다.','호흡이 느려지고, 심장이 느리게 뛴다.','호흡이 멈추고, 체온이 내려간다.','심장이 멈추고, 땀이 마른다.'],ans:1},
+  {id:9,cat:'적용적',type:'mc',pts:2,
+   q:'호흡기관에 대한 설명으로 옳은 것끼리 짝지은 것은?',
+   opts:['코, 숨관, 숨관가지, 폐로 이루어지고, 산소를 받아들인다.','심장과 혈관으로 이루어지고, 혈액을 보낸다.','콩팥과 방광으로 이루어지고, 오줌을 만든다.','입과 위로 이루어지고, 음식물을 소화한다.'],ans:1},
+  {id:10,cat:'적용적',type:'mc',pts:2,
+   q:'콩팥에서 걸러진 혈액과 노폐물이 처리되는 과정으로 옳은 것은?',
+   opts:['노폐물은 오줌이 되어 몸 밖으로 나가고, 걸러진 혈액은 다시 온몸을 순환한다.','노폐물이 폐로 가서 호흡으로 나간다.','걸러진 혈액이 몸 밖으로 나간다.','노폐물이 다시 음식물이 된다.'],ans:1},
+  {id:11,cat:'전이적',type:'essay',pts:4,
+   q:'운동을 한 뒤 휴식을 취하면 맥박 수가 다시 느려진다. 그 까닭을 뼈와 근육, 순환기관의 관계로 설명하시오.',
+   model:'운동할 때는 뼈와 근육이 산소를 많이 사용하므로 순환기관이 빠르게 작용하여 맥박이 빨라진다. 휴식을 취하면 근육이 사용하는 산소의 양이 줄어들어 순환기관이 천천히 작용해도 되므로 맥박 수가 다시 느려진다.',
+   keys:['뼈','근육','순환기관','산소','맥박']},
+  {id:12,cat:'전이적',type:'essay',pts:4,
+   q:'간, 쓸개, 이자도 소화기관에 포함되는 까닭을 소화기관이 하는 일과 연결하여 설명하시오.',
+   model:'간, 쓸개, 이자는 소화를 돕는 액체를 분비하여 음식물이 잘게 쪼개지도록 돕는다. 소화기관은 음식물을 소화하여 영양소를 흡수하는 기관이므로, 소화를 돕는 간·쓸개·이자도 소화기관에 포함된다.',
+   keys:['간','쓸개','이자','소화','영양소']},
+  {id:13,cat:'전이적',type:'essay',pts:4,
+   q:'콩팥이 노폐물을 제대로 걸러 내지 못하면 우리 몸에 문제가 생기는 까닭을 배설기관과 순환기관의 관계로 설명하시오.',
+   model:'콩팥은 혈액 속의 노폐물을 걸러 오줌으로 내보낸다. 콩팥이 노폐물을 걸러 내지 못하면 노폐물이 혈액에 쌓인 채 온몸을 돌게 되어, 몸의 여러 기관이 제대로 일하지 못하고 건강에 문제가 생긴다.',
+   keys:['콩팥','노폐물','혈액','배설기관','순환기관']},
+  {id:14,cat:'전이적',type:'essay',pts:4,
+   q:'숨을 들이마실 때 받아들인 산소가 우리 몸에서 어떻게 쓰이는지 호흡기관·순환기관·뼈와 근육의 연결로 설명하시오.',
+   model:'코로 들이마신 산소는 폐에서 혈액으로 들어가고, 순환기관이 이 산소를 온몸에 운반한다. 운반된 산소는 뼈와 근육이 몸을 움직이는 데 쓰인다. 이처럼 산소는 호흡기관·순환기관·뼈와 근육을 거치며 이어져 사용된다.',
+   keys:['산소','호흡기관','순환기관','근육','혈액']},
+  {id:15,cat:'전이적',type:'essay',pts:4,
+   q:'우리가 음식을 먹고 숨을 쉬며 몸을 움직이는 동안 소화·호흡·순환·배설기관이 서로 어떻게 연결되어 작용하는지 설명하시오.',
+   model:'소화기관은 음식물에서 영양소를 흡수하고, 호흡기관은 산소를 받아들인다. 순환기관은 이 영양소와 산소를 온몸에 운반하고, 몸에서 생긴 이산화 탄소는 호흡기관으로, 노폐물은 배설기관으로 운반하여 몸 밖으로 내보낸다. 이처럼 각 기관은 서로 연결되어 함께 작용한다.',
+   keys:['소화기관','호흡기관','순환기관','배설기관','영양소','산소']}
+]}
+};
+
+const CAT_LABEL = { '사실적':'단일구조적', '적용적':'다중구조적', '전이적':'관계적' };
+const GROUP_LABEL = { '실험집단':'가', '통제집단':'나' };
+
+/* ══════════════════════════════════════════
+   GAS API 레이어
+══════════════════════════════════════════ */
+async function gasPost(body) {
+  const res  = await fetch(GAS_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function gasGet(params) {
+  const qs  = new URLSearchParams(params).toString();
+  const res = await fetch(`${GAS_URL}?${qs}`);
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || '서버 오류');
+  return data;
+}
+
+async function apiCheck(sid, tt) {
+  try { return (await gasGet({ action:'check', sid, tt })).exists; }
+  catch { return false; }
+}
+
+async function apiGrade(questions, answers) {
+  return (await gasPost({ action:'grade', questions, answers })).grades;
+}
+
+async function apiSave(result) {
+  return gasPost({ action:'save', ...result });
+}
+
+async function apiLoadAll() {
+  return (await gasGet({ action:'all' })).results;
+}
+
+/* ══════════════════════════════════════════
+   점수 계산
+══════════════════════════════════════════ */
+function calcScores(qs, answers, grades) {
+  const s = { 사실적:0, 적용적:0, 전이적:0 };
+  qs.forEach(q => {
+    const sc = q.type === 'mc'
+      ? (answers[q.id] === q.ans ? q.pts : 0)
+      : ((grades && grades[q.id]) ? grades[q.id].score : 0);
+    s[q.cat] += sc;
+  });
+  return { ...s, total: s.사실적 + s.적용적 + s.전이적 };
+}
+
+/* ══════════════════════════════════════════
+   엑셀 내보내기
+══════════════════════════════════════════ */
+/* ── 엑셀 셀을 텍스트로 강제 (ID가 날짜/숫자로 자동변환되는 것 방지) ── */
+function forceTextCol(ws, colIndices, startRow, rowCount) {
+  colIndices.forEach(c => {
+    for (let i = 0; i < rowCount; i++) {
+      const ref = XLSX.utils.encode_cell({ r: startRow + i, c });
+      const cell = ws[ref];
+      if (cell && cell.v !== undefined && cell.v !== null && cell.v !== '') {
+        cell.t = 's';
+        cell.v = (cell.v instanceof Date) ? cell.v.toISOString() : String(cell.v);
+        cell.z = '@';
+      }
+    }
+  });
+}
+
+function exportExcel(allResults, groupFilter, filename) {
+  const data = allResults.filter(r => !groupFilter || r.group === groupFilter);
+  if (!data.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const map = {};
+  data.forEach(r => {
+    if (!map[r.studentId]) map[r.studentId] = { ID:r.studentId, GRP:r.group };
+    map[r.studentId][r.testType] = r.scores;
+  });
+
+  const COL  = ['학생ID','집단','01_총점','01_단일구조적','01_다중구조적','01_관계적','02_총점','02_단일구조적','02_다중구조적','02_관계적','03_총점','03_단일구조적','03_다중구조적','03_관계적'];
+  const H1   = ['학생ID','집단','A형 문제','','','','B형 문제','','','','C형 문제','','',''];
+  const H2   = ['','','01_총점','01_단일구조적','01_다중구조적','01_관계적','02_총점','02_단일구조적','02_다중구조적','02_관계적','03_총점','03_단일구조적','03_다중구조적','03_관계적'];
+  const TMAP = { '01':'A','02':'B','03':'C' };
+  const CMAP = { '총점':'total','단일구조적':'사실적','다중구조적':'적용적','관계적':'전이적' };
+
+  const buildSheet = src => {
+    const rows = Object.values(src).sort((a,b)=>a.ID.localeCompare(b.ID)).map(s =>
+      COL.map(c => {
+        if (c==='학생ID') return s.ID;
+        if (c==='집단')   return s.GRP;
+        const [p,cat] = c.split('_');
+        const sc = s[TMAP[p]];
+        return sc != null ? sc[CMAP[cat]] : '';
+      })
+    );
+    const ws = XLSX.utils.aoa_to_sheet([H1,H2,...rows]);
+    forceTextCol(ws, [0,1], 2, rows.length);
+    ws['!cols']   = COL.map((_,i) => ({ wch: i<2?14:9 }));
+    ws['!merges'] = [
+      {s:{r:0,c:0},e:{r:1,c:0}},{s:{r:0,c:1},e:{r:1,c:1}},
+      {s:{r:0,c:2},e:{r:0,c:5}},{s:{r:0,c:6},e:{r:0,c:9}},{s:{r:0,c:10},e:{r:0,c:13}}
+    ];
+    return ws;
+  };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, buildSheet(map), groupFilter||'전체');
+  if (!groupFilter) {
+    ['실험집단','통제집단'].forEach(g => {
+      const gd = allResults.filter(r=>r.group===g);
+      if (!gd.length) return;
+      const gm = {};
+      gd.forEach(r=>{ if(!gm[r.studentId]) gm[r.studentId]={ID:r.studentId,GRP:r.group}; gm[r.studentId][r.testType]=r.scores; });
+      XLSX.utils.book_append_sheet(wb, buildSheet(gm), g);
+    });
+  }
+  XLSX.writeFile(wb, filename);
+}
+
+/* ══════════════════════════════════════════
+   문항별 점수 내보내기 ①
+   — 내적 타당도(Cronbach's α)용
+   — 형별 시트 / 학생 1명 = 1행
+   — 열: 학생ID, 집단, 문1~문15 개별점수, 총점
+══════════════════════════════════════════ */
+function exportItemScores(allResults, filename) {
+  if (!allResults.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  ['A','B','C'].forEach(tt => {
+    const rows = allResults.filter(r => r.testType === tt);
+    if (!rows.length) return;
+
+    const qs = EXAMS[tt].qs; // 해당 형의 문항 배열
+
+    // 헤더: 학생ID, 집단, 문1~문15, 총점
+    const header = ['학생ID','집단',
+      ...qs.map(q => `문${q.id}(${CAT_LABEL[q.cat].slice(0,1)}·${q.pts}점)`),
+      '총점'
+    ];
+
+    const dataRows = rows
+      .sort((a,b) => String(a.studentId).localeCompare(String(b.studentId)))
+      .map(r => {
+        const itemScores = qs.map(q => {
+          if (q.type === 'mc') {
+            return (r.answers && r.answers[q.id] === q.ans) ? q.pts : 0;
+          } else {
+            return (r.grades && r.grades[q.id]) ? r.grades[q.id].score : 0;
+          }
+        });
+        return [r.studentId, r.group, ...itemScores, r.scores.total];
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet([header, ...dataRows]);
+    forceTextCol(ws, [0,1], 1, dataRows.length);
+    ws['!cols'] = header.map((_,i) => ({ wch: i===0?14 : i===1?10 : 9 }));
+
+    // 헤더 행 스타일 구분을 위해 셀에 주석 표시 (색상은 xlsx 라이브러리 한계로 생략)
+    XLSX.utils.book_append_sheet(wb, ws, `${tt}형_문항별`);
+  });
+
+  XLSX.writeFile(wb, filename);
+}
+
+/* ══════════════════════════════════════════
+   서술형 채점 신뢰도용 내보내기 ②
+   — Cohen's κ / ICC 계산용
+   — AI 채점 점수(채점자1)와 교사 입력란(채점자2) 병기
+   — 열: 학생ID, 집단, 검사형,
+          문11_AI, 문11_교사, 문12_AI, 문12_교사 … 문15
+══════════════════════════════════════════ */
+function exportEssayReliability(allResults, filename) {
+  if (!allResults.length) { alert('내보낼 데이터가 없습니다.'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  ['A','B','C'].forEach(tt => {
+    const rows = allResults.filter(r => r.testType === tt);
+    if (!rows.length) return;
+
+    const essayIds = EXAMS[tt].qs.filter(q => q.type === 'essay').map(q => q.id);
+
+    // 헤더 2행: 첫 번째 행에 문항명 병합, 두 번째 행에 채점자 구분
+    const H1 = ['학생ID','집단','검사형',
+      ...essayIds.flatMap(id => [`문${id}`, '']),
+      '서술형합계_AI','서술형합계_교사'
+    ];
+    const H2 = ['','','',
+      ...essayIds.flatMap(() => ['AI채점(1)', '교사채점(2)']),
+      '',''];
+
+    const merges = essayIds.map((_, i) => ({
+      s: { r:0, c: 3 + i*2 },
+      e: { r:0, c: 3 + i*2 + 1 }
+    }));
+    // 학생ID, 집단, 검사형도 2행 병합
+    [0,1,2].forEach(c => merges.push({ s:{r:0,c}, e:{r:1,c} }));
+    // 합계 열도 2행 병합
+    const lastC = 3 + essayIds.length*2;
+    merges.push({ s:{r:0,c:lastC},   e:{r:1,c:lastC}   });
+    merges.push({ s:{r:0,c:lastC+1}, e:{r:1,c:lastC+1} });
+
+    const dataRows = rows
+      .sort((a,b) => String(a.studentId).localeCompare(String(b.studentId)))
+      .map(r => {
+        const aiScores = essayIds.map(id =>
+          (r.grades && r.grades[id]) ? r.grades[id].score : ''
+        );
+        const teacherCols = essayIds.map(() => ''); // 교사가 직접 입력할 빈 칸
+        const paired = essayIds.flatMap((id, i) => [aiScores[i], teacherCols[i]]);
+        const aiTotal = aiScores.reduce((s,v) => s + (typeof v==='number'?v:0), 0);
+        return [r.studentId, r.group, r.testType, ...paired, aiTotal, ''];
+      });
+
+    const ws = XLSX.utils.aoa_to_sheet([H1, H2, ...dataRows]);
+    forceTextCol(ws, [0,1,2], 2, dataRows.length);
+    ws['!merges'] = merges;
+    ws['!cols'] = [
+      {wch:14},{wch:10},{wch:8},
+      ...essayIds.flatMap(() => [{wch:11},{wch:11}]),
+      {wch:14},{wch:14}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, `${tt}형_서술형신뢰도`);
+  });
+
+  XLSX.writeFile(wb, filename);
+}
+
+/* ══════════════════════════════════════════
+   홈
+══════════════════════════════════════════ */
+function Home({ onStudent, onTeacher, showTeacher}) {
+  return (
+    <div style={{padding:'3rem 1.5rem',maxWidth:440,margin:'0 auto',textAlign:'center'}}>
+      <div style={{fontSize:60,marginBottom:16}}>🫀</div>
+      <h1 style={{fontSize:24,fontWeight:700,marginBottom:8}}>우리 몸의 구조와 기능</h1>
+      <p style={{fontSize:15,color:'#64748b',marginBottom:4}}>5학년 단원 문제 풀기</p>
+      <p style={{fontSize:13,color:'#94a3b8',marginBottom:40}}>「우리 몸의 구조와 기능」 단원</p>
+      <div style={{display:'flex',flexDirection:'column',gap:12}}>
+        <button className="btn btn-green" style={{padding:'20px',fontSize:18,borderRadius:14}} onClick={onStudent}>문제 풀기</button>
+        {showTeacher && <button className="btn" style={{padding:'15px',fontSize:15}} onClick={onTeacher}>교사 결과 확인하기</button>}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   학생 로그인
+══════════════════════════════════════════ */
+function StudentLogin({ onNext, onBack }) {
+  const [sid, setSid]           = useState('');
+  const [group, setGroup]       = useState('');
+  const [testType, setTestType] = useState('');
+  const [msg, setMsg]           = useState('');
+  const [loading, setLoading]   = useState(false);
+
+  const go = async () => {
+    if (!sid.trim() || !group || !testType) { setMsg('모든 항목을 입력·선택하세요.'); return; }
+    setLoading(true); setMsg('서버 확인 중...');
+    const exists = await apiCheck(sid.trim(), testType);
+    if (exists) { setMsg('이미 제출된 검사입니다. 선생님께 문의하세요.'); setLoading(false); return; }
+    setLoading(false); setMsg('');
+    onNext({ studentId: sid.trim(), group, testType });
+  };
+
+  return (
+    <div className="page" style={{maxWidth:480,margin:'0 auto'}}>
+      <button className="btn" style={{marginBottom:24,fontSize:13}} onClick={onBack}>← 처음으로</button>
+      <h2 style={{fontSize:22,fontWeight:700,marginBottom:28}}>문제 풀기 시작</h2>
+      <div style={{marginBottom:20}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:8}}>학생 아이디</label>
+        <input type="text" placeholder="예: 5-1-01" value={sid} onChange={e=>{setSid(e.target.value);setMsg('');}} style={{fontSize:17}}/>
+      </div>
+      <div style={{marginBottom:20}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:10}}>우리 집단</label>
+        <div style={{display:'flex',gap:8}}>
+          {['실험집단','통제집단'].map(g=>(
+            <button key={g} className={`btn ${group===g?'btn-green':''}`} style={{flex:1,padding:'16px',fontSize:15}} onClick={()=>{setGroup(g);setMsg('');}}>
+              {GROUP_LABEL[g]}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div style={{marginBottom:32}}>
+        <label style={{fontSize:14,color:'#475569',display:'block',marginBottom:10}}>검사 종류</label>
+        <div style={{display:'flex',gap:8}}>
+          {[['A','A형 문제'],['B','B형 문제'],['C','C형 문제']].map(([k,lb])=>(
+            <button key={k} className={`btn ${testType===k?'btn-blue':''}`} style={{flex:1,padding:'12px 4px',fontSize:14}} onClick={()=>{setTestType(k);setMsg('');}}>
+              <div style={{fontWeight:700}}>{k}형</div>
+              <div style={{fontSize:11,marginTop:3,opacity:0.8}}>{lb}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      {msg && <div style={{background:msg.includes('중')?'#f0fdf4':'#fef3c7',border:`1px solid ${msg.includes('중')?'#86efac':'#d97706'}`,borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:14,color:msg.includes('중')?'#166534':'#92400e'}}>{msg}</div>}
+      <button className="btn btn-green" style={{width:'100%',padding:'18px',fontSize:17}} onClick={go} disabled={loading}>
+        {loading ? '확인 중...' : '문제 풀기 시작 →'}
+      </button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   검사 인터페이스
+══════════════════════════════════════════ */
+function ExamInterface({ studentId, group, testType, onDone }) {
+  const exam   = EXAMS[testType];
+  const qs     = exam.qs;
+  const [idx, setIdx]         = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [grading, setGrading] = useState(false);
+  const [prog, setProg]       = useState(0);
+  const [progMsg, setProgMsg] = useState('');
+  const q      = qs[idx];
+  const mcDone = qs.filter(q=>q.type==='mc').every(q=>answers[q.id]!==undefined);
+  const setAns = (qid, val) => setAnswers(prev=>({...prev,[qid]:val}));
+
+  const submit = async () => {
+    setGrading(true);
+    const essayQs = qs.filter(x=>x.type==='essay');
+    const essayAnswers = {};
+    essayQs.forEach(q => { essayAnswers[q.id] = answers[q.id] || ''; });
+
+    setProg(10); setProgMsg('서술형 AI 채점 중... (서버 처리)');
+    let grades = {};
+    try {
+      grades = await apiGrade(
+        essayQs.map(q=>({id:q.id, q:q.q, model:q.model, keys:q.keys})),
+        essayAnswers
+      );
+    } catch (err) {
+      console.error('채점 오류:', err);
+      essayQs.forEach(q => { grades[q.id] = { score:0, feedback:'채점 오류' }; });
+    }
+
+    setProg(70); setProgMsg('점수 집계 중...');
+    const scores = calcScores(qs, answers, grades);
+
+    setProg(85); setProgMsg('Google Sheets에 저장 중...');
+    try {
+      await apiSave({ studentId, group, testType, examLabel:exam.label, scores, answers, grades, timestamp:Date.now() });
+    } catch (err) {
+      console.error('저장 오류:', err);
+    }
+
+    setProg(100); setProgMsg('완료!');
+    await new Promise(r=>setTimeout(r,500));
+    setGrading(false);
+    onDone();
+  };
+
+  if (grading) return (
+    <div style={{padding:'4rem 2rem',maxWidth:400,margin:'0 auto',textAlign:'center'}}>
+      <div style={{fontSize:44,marginBottom:18}}>⏳</div>
+      <h2 style={{fontSize:20,fontWeight:700,marginBottom:10}}>채점 중입니다</h2>
+      <p style={{fontSize:14,color:'#64748b',marginBottom:28}}>{progMsg}</p>
+      <div className="progress-bar" style={{marginBottom:10}}><div className="progress-fill" style={{width:`${prog}%`}}/></div>
+      <p style={{fontSize:13,color:'#94a3b8'}}>{prog}%</p>
+    </div>
+  );
+
+  return (
+    <div style={{padding:'1rem',maxWidth:560,margin:'0 auto'}}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10,padding:'0 0.5rem'}}>
+        <span style={{fontSize:13,color:'#64748b'}}>{exam.label}</span>
+        <span style={{fontSize:13,color:'#64748b',fontWeight:600}}>{idx+1} / {qs.length}</span>
+      </div>
+      <div className="progress-bar" style={{marginBottom:20}}><div className="progress-fill" style={{width:`${((idx+1)/qs.length)*100}%`}}/></div>
+
+      <div className="card" style={{marginBottom:16}}>
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+          <span style={{fontSize:16,fontWeight:700}}>{idx+1}번</span>
+          <span className={`badge badge-${q.cat}`}>{CAT_LABEL[q.cat]} 이해</span>
+          <span style={{marginLeft:'auto',fontSize:13,color:'#64748b',fontWeight:600}}>{q.pts}점</span>
+        </div>
+        <p style={{fontSize:15,lineHeight:1.8,marginBottom:q.type==='mc'?18:14,color:'#1e293b'}}>{q.q}</p>
+        {q.type==='mc' && q.opts.map((o,i)=>(
+          <button key={i} className={`opt-btn ${answers[q.id]===(i+1)?'selected':''}`} onClick={()=>setAns(q.id,i+1)}>
+            <span style={{fontWeight:700,marginRight:10,fontSize:16}}>{'①②③④'[i]}</span>{o}
+          </button>
+        ))}
+        {q.type==='essay' && (
+          <>
+            <div style={{background:'#ede9fe',border:'1px solid #7c3aed',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#4c1d95'}}>
+              ★ 알고 있는 것을 자유롭게 서술하세요 (최대 4점)
+            </div>
+            <textarea rows={6} placeholder="여기에 답을 쓰세요..." value={answers[q.id]||''} onChange={e=>setAns(q.id,e.target.value)}/>
+          </>
+        )}
+      </div>
+
+      <div style={{display:'flex',gap:8,marginBottom:16}}>
+        <button className="btn" style={{flex:1,padding:'14px'}} onClick={()=>setIdx(i=>i-1)} disabled={idx===0}>← 이전</button>
+        {idx < qs.length-1
+          ? <button className="btn btn-green" style={{flex:1,padding:'14px'}} onClick={()=>setIdx(i=>i+1)}>다음 →</button>
+          : <button className="btn btn-green" style={{flex:1,padding:'14px'}} onClick={submit} disabled={!mcDone}>제출하기 ✓</button>
+        }
+      </div>
+      <div style={{display:'flex',flexWrap:'wrap',gap:5,padding:'0 0.25rem'}}>
+        {qs.map((qq,i)=>{
+          const done = answers[qq.id]!==undefined && answers[qq.id]!=='';
+          return (
+            <button key={i} onClick={()=>setIdx(i)}
+              style={{width:34,height:34,borderRadius:7,fontSize:12,cursor:'pointer',fontWeight:600,
+                border:`2px solid ${i===idx?'#22c55e':done?'#86efac':'#e2e8f0'}`,
+                background:i===idx?'#dcfce7':done?'#f0fdf4':'#fff',
+                color:i===idx?'#052e16':done?'#16a34a':'#64748b'}}>
+              {i+1}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   학생 완료
+══════════════════════════════════════════ */
+function StudentDone() {
+  return (
+    <div style={{padding:'5rem 2rem',maxWidth:400,margin:'0 auto',textAlign:'center'}}>
+      <div style={{width:80,height:80,borderRadius:'50%',background:'#dcfce7',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 24px',fontSize:36,color:'#16a34a'}}>✓</div>
+      <h2 style={{fontSize:24,fontWeight:700,marginBottom:14,color:'#052e16'}}>검사 제출 완료!</h2>
+      <p style={{fontSize:16,color:'#475569',lineHeight:1.8}}>수고했습니다.<br/>선생님께 완료 사실을 알려주세요.</p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   교사 대시보드
+══════════════════════════════════════════ */
+function TeacherDashboard({ onBack }) {
+  const [selGroup, setSelGroup]   = useState('실험집단');
+  const [selTest, setSelTest]     = useState('A');
+  const [all, setAll]             = useState([]);
+  const [loading, setLoading]     = useState(true);
+  const [loadErr, setLoadErr]     = useState('');
+  const [detailId, setDetailId]   = useState(null);
+  const [exporting, setExporting] = useState(false);
+  const [checked, setChecked]     = useState({});
+  const [deleting, setDeleting]   = useState(false);
+
+  const loadData = useCallback(async () => {
+    try {
+      const results = await apiLoadAll();
+      setAll(results); setLoadErr('');
+    } catch (err) { setLoadErr('로드 실패: ' + err.message); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(()=>{ loadData(); const t=setInterval(loadData,10000); return()=>clearInterval(t); },[loadData]);
+
+  const filtered = all.filter(r=>r.group===selGroup && r.testType===selTest);
+  const avg = (arr,fn) => { if(!arr.length) return '-'; return (arr.reduce((a,r)=>a+fn(r),0)/arr.length).toFixed(1); };
+  const doExport      = (gf,fn) => { setExporting(true); setTimeout(()=>{exportExcel(all,gf,fn);setExporting(false);},100); };
+  const doExportItem  = (fn)    => { setExporting(true); setTimeout(()=>{exportItemScores(all,fn);setExporting(false);},100); };
+  const doExportEssay = (fn)    => { setExporting(true); setTimeout(()=>{exportEssayReliability(all,fn);setExporting(false);},100); };
+
+  const ck = (r) => r.studentId + '_' + r.testType;
+  const toggleCheck = (r) => setChecked(prev=>({...prev,[ck(r)]:!prev[ck(r)]}));
+  const toggleAll   = () => {
+    const allChecked = filtered.every(r=>checked[ck(r)]);
+    const next = {};
+    filtered.forEach(r=>{ next[ck(r)] = !allChecked; });
+    setChecked(prev=>({...prev,...next}));
+  };
+  const checkedList  = filtered.filter(r=>checked[ck(r)]);
+  const allChecked   = filtered.length>0 && filtered.every(r=>checked[ck(r)]);
+
+  const deleteChecked = async () => {
+    if (!checkedList.length) { alert('삭제할 항목을 먼저 체크하세요.'); return; }
+    const names = checkedList.map(r=>`${r.studentId} (${r.testType}형)`).join('\n');
+    const ok = window.confirm(`아래 검사 결과를 삭제합니다.\n삭제 후 복구가 불가능합니다.\n\n${names}`);
+    if (!ok) return;
+    setDeleting(true); setLoadErr('');
+    try {
+      const items = checkedList.map(r=>({ studentId: r.studentId, testType: r.testType }));
+      const res = await fetch(GAS_URL, {
+        method: 'POST', headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'delete', items }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || '서버에서 삭제 실패');
+      setChecked({});
+      await loadData();
+      alert(`${data.deleted || checkedList.length}건 삭제 완료`);
+    } catch(err) {
+      setLoadErr('삭제 오류: ' + err.message);
+      alert('삭제 오류: ' + err.message);
+    }
+    setDeleting(false);
+  };
+
+  if (loading) return (
+    <div style={{padding:'4rem',textAlign:'center',color:'#64748b'}}>
+      <div style={{fontSize:36,marginBottom:12}}>⏳</div>
+      <p>Google Sheets에서 데이터 불러오는 중...</p>
+    </div>
+  );
+
+  /* 상세 보기 */
+  if (detailId) {
+    const detail = all.find(r=>r.studentId===detailId && r.testType===selTest);
+    if (!detail) return <div className="page"><button className="btn" onClick={()=>setDetailId(null)}>← 뒤로</button></div>;
+    const qs = EXAMS[selTest].qs;
+    return (
+      <div className="page" style={{maxWidth:640,margin:'0 auto'}}>
+        <button className="btn" style={{marginBottom:16,fontSize:13}} onClick={()=>setDetailId(null)}>← 목록으로</button>
+        <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:20,flexWrap:'wrap'}}>
+          <h2 style={{fontSize:20,fontWeight:700}}>{detail.studentId}</h2>
+          <span className="badge" style={{background:'#dcfce7',color:'#166534'}}>{detail.group}</span>
+          <span className="badge badge-사실적">{detail.examLabel}</span>
+          <span style={{fontSize:12,color:'#94a3b8',marginLeft:'auto'}}>{detail.timestamp?new Date(detail.timestamp).toLocaleString('ko-KR'):''}</span>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(4,minmax(0,1fr))',gap:10,marginBottom:24}}>
+          {[['총점',detail.scores.total,40,'#dcfce7','#166534'],['단일구조적',detail.scores.사실적,10,'#dbeafe','#1e40af'],['다중구조적',detail.scores.적용적,10,'#fef3c7','#92400e'],['관계적',detail.scores.전이적,20,'#ede9fe','#4c1d95']].map(([lb,sc,mx,bg,tc])=>(
+            <div key={lb} style={{background:bg,borderRadius:10,padding:'12px 8px',textAlign:'center'}}>
+              <div style={{fontSize:12,color:tc,marginBottom:4,fontWeight:600}}>{lb}</div>
+              <div style={{fontSize:22,fontWeight:700,color:tc}}>{sc}<span style={{fontSize:12,fontWeight:400}}>/{mx}</span></div>
+            </div>
+          ))}
+        </div>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>선다형 (1~10번)</h3>
+        <div style={{overflowX:'auto',marginBottom:24}}>
+          <table>
+            <thead><tr><th>번호</th><th>영역</th><th>학생 답</th><th>정답</th><th style={{textAlign:'center'}}>점수</th></tr></thead>
+            <tbody>
+              {qs.filter(q=>q.type==='mc').map(q=>{
+                const ok = detail.answers[q.id]===q.ans;
+                return (
+                  <tr key={q.id}>
+                    <td style={{fontWeight:600}}>{q.id}번</td>
+                    <td><span className={`badge badge-${q.cat}`} style={{fontSize:11}}>{CAT_LABEL[q.cat]}</span></td>
+                    <td>{detail.answers[q.id]?'①②③④'[(detail.answers[q.id]||1)-1]:'-'}</td>
+                    <td style={{fontWeight:600}}>{'①②③④'[q.ans-1]}</td>
+                    <td style={{textAlign:'center',fontWeight:700,color:ok?'#16a34a':'#dc2626'}}>{ok?q.pts:0}점</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:12}}>서술형 (11~15번) — AI 채점 결과</h3>
+        {qs.filter(q=>q.type==='essay').map(q=>{
+          const g = detail.grades&&detail.grades[q.id];
+          const sc = g?g.score:0;
+          const col=['#dc2626','#ea580c','#ca8a04','#16a34a','#059669'][sc];
+          return (
+            <div key={q.id} className="card" style={{marginBottom:12}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                <span style={{fontSize:14,fontWeight:700}}>{q.id}번</span>
+                <span className="badge badge-전이적">관계적</span>
+                <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{width:32,height:32,borderRadius:'50%',background:col,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700,fontSize:16}}>{sc}</div>
+                  <span style={{fontSize:13,color:'#64748b'}}>/4점</span>
+                </div>
+              </div>
+              <div style={{fontSize:13,background:'#f8fafc',borderRadius:8,padding:'10px 12px',marginBottom:8,lineHeight:1.7,border:'1px solid #e2e8f0'}}>
+                <div style={{fontSize:11,color:'#94a3b8',marginBottom:4,fontWeight:600}}>학생 답안</div>
+                {detail.answers[q.id]||<span style={{color:'#94a3b8',fontStyle:'italic'}}>무응답</span>}
+              </div>
+              {g&&<div style={{fontSize:12,color:'#4c1d95',background:'#ede9fe',borderRadius:6,padding:'8px 12px'}}><span style={{fontWeight:600}}>AI 피드백</span>: {g.feedback}</div>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  /* 메인 대시보드 */
+  return (
+    <div className="page" style={{maxWidth:780,margin:'0 auto'}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:16}}>
+        <button className="btn" style={{fontSize:13}} onClick={onBack}>← 처음으로</button>
+        <button className="btn" style={{fontSize:13,background:'#f0fdf4',borderColor:'#86efac',color:'#166534'}} onClick={loadData}>↻ 새로고침</button>
+        {loadErr&&<span style={{fontSize:12,color:'#dc2626'}}>{loadErr}</span>}
+      </div>
+      <h2 style={{fontSize:22,fontWeight:700,marginBottom:20}}>교사 결과 대시보드</h2>
+
+      <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:12,padding:'16px 18px',marginBottom:24}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#166534',marginBottom:12}}>엑셀 내보내기 — 학생 1명 = 1행</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+          <button className="btn btn-excel" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport('실험집단','5학년_개념이해도_실험집단.xlsx')} disabled={exporting}>↓ 실험집단</button>
+          <button className="btn btn-excel" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport('통제집단','5학년_개념이해도_통제집단.xlsx')} disabled={exporting}>↓ 통제집단</button>
+          <button className="btn btn-excel2" style={{fontSize:13,padding:'10px 18px'}} onClick={()=>doExport(null,'5학년_개념이해도_전체.xlsx')} disabled={exporting}>↓ 전체 (집단별 시트)</button>
+        </div>
+        <div style={{fontSize:11,color:'#4d7c0f',lineHeight:1.8}}>
+          열 구성: 학생ID · 집단 ·
+          <span style={{background:'#bbf7d0',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>01_총점 · 01_단일구조적 · 01_다중구조적 · 01_관계적</span>
+          <span style={{background:'#fef08a',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>02_총점 · 02_단일구조적 · 02_다중구조적 · 02_관계적</span>
+          <span style={{background:'#ddd6fe',padding:'1px 6px',borderRadius:4,margin:'0 3px'}}>03_총점 · 03_단일구조적 · 03_다중구조적 · 03_관계적</span>
+        </div>
+      </div>
+
+      {/* ── 내적 타당도용 문항별 점수 ── */}
+      <div style={{background:'#eff6ff',border:'1px solid #93c5fd',borderRadius:12,padding:'16px 18px',marginBottom:16}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#1e40af',marginBottom:8}}>📊 문항별 점수 내보내기 — 내적 타당도(Cronbach's α)용</div>
+        <div style={{fontSize:12,color:'#3730a3',marginBottom:12,lineHeight:1.7}}>
+          형별 시트 · 학생 1명 = 1행 · 열: 학생ID · 집단 · 문1~문15 개별점수 · 총점<br/>
+          <span style={{fontSize:11,color:'#6366f1'}}>→ SPSS/R에서 Cronbach's α 계산에 바로 사용 가능</span>
+        </div>
+        <button className="btn btn-blue" style={{fontSize:13,padding:'10px 20px'}}
+          onClick={()=>doExportItem('5학년_문항별점수_알파용.xlsx')} disabled={exporting}>
+          ↓ 문항별 점수 다운로드 (A·B·C형 시트)
+        </button>
+      </div>
+
+      {/* ── 서술형 채점 신뢰도용 ── */}
+      <div style={{background:'#fdf4ff',border:'1px solid #d8b4fe',borderRadius:12,padding:'16px 18px',marginBottom:24}}>
+        <div style={{fontSize:14,fontWeight:700,color:'#6b21a8',marginBottom:8}}>✍️ 서술형 채점 신뢰도 내보내기 — Cohen's κ / ICC용</div>
+        <div style={{fontSize:12,color:'#581c87',marginBottom:12,lineHeight:1.7}}>
+          형별 시트 · 열: 학생ID · 집단 · 문11~문15별 <b>AI채점(1)</b> + <b>교사채점(2)</b> 병기<br/>
+          <span style={{fontSize:11,color:'#7c3aed'}}>→ 교사채점(2) 칸에 직접 점수 입력 후 SPSS/R에서 κ 또는 ICC 계산</span>
+        </div>
+        <button className="btn btn-purple" style={{fontSize:13,padding:'10px 20px'}}
+          onClick={()=>doExportEssay('5학년_서술형신뢰도_카파용.xlsx')} disabled={exporting}>
+          ↓ 서술형 신뢰도 시트 다운로드 (A·B·C형 시트)
+        </button>
+      </div>
+
+      <div style={{display:'flex',gap:8,marginBottom:14}}>
+        {['실험집단','통제집단'].map(g=>(
+          <button key={g} className={`btn ${selGroup===g?'btn-green':''}`} style={{flex:1,padding:'14px',fontSize:15,fontWeight:selGroup===g?700:400}} onClick={()=>setSelGroup(g)}>{GROUP_LABEL[g]}</button>
+        ))}
+      </div>
+      <div style={{display:'flex',gap:8,marginBottom:20}}>
+        {[['A','A형 문제','btn-blue'],['B','B형 문제','btn-amber'],['C','C형 문제','btn-purple']].map(([k,lb,bc])=>(
+          <button key={k} className={`btn ${selTest===k?bc:''}`} style={{flex:1,padding:'11px 4px',fontSize:14}} onClick={()=>setSelTest(k)}>
+            <div style={{fontWeight:700}}>{k}형</div><div style={{fontSize:11,marginTop:3,opacity:0.8}}>{lb}</div>
+          </button>
+        ))}
+      </div>
+
+      {filtered.length>0&&(
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+          {[['응시 인원',`${filtered.length}명`,'#dcfce7','#166534'],['총점 평균',avg(filtered,r=>r.scores.total),'#dbeafe','#1e40af'],['단일구조적 평균',avg(filtered,r=>r.scores.사실적),'#fef3c7','#92400e'],['다중구조적 평균',avg(filtered,r=>r.scores.적용적),'#fef3c7','#92400e'],['관계적 평균',avg(filtered,r=>r.scores.전이적),'#ede9fe','#4c1d95']].map(([lb,val,bg,tc])=>(
+            <div key={lb} style={{background:bg,borderRadius:8,padding:'6px 14px',fontSize:13,color:tc,fontWeight:600}}>{lb}: {val}</div>
+          ))}
+        </div>
+      )}
+
+      {filtered.length===0 ? (
+        <div style={{textAlign:'center',padding:'4rem 2rem',color:'#94a3b8',background:'#f8fafc',borderRadius:14,border:'1px dashed #e2e8f0'}}>
+          <div style={{fontSize:36,marginBottom:12}}>📋</div>
+          <p style={{fontSize:15}}>{selGroup}의 {EXAMS[selTest].label} 결과가 아직 없습니다.</p>
+        </div>
+      ) : (
+        <>
+          <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:10,padding:'10px 12px',background:checkedList.length?'#fef2f2':'#f8fafc',borderRadius:8,border:`1px solid ${checkedList.length?'#fca5a5':'#e2e8f0'}`}}>
+            <span style={{fontSize:13,color:'#475569'}}>
+              {checkedList.length>0 ? `${checkedList.length}개 선택됨` : '행을 선택하면 삭제할 수 있습니다'}
+            </span>
+            <button
+              style={{marginLeft:'auto',padding:'6px 16px',borderRadius:7,border:'1px solid #fca5a5',background:checkedList.length?'#dc2626':'#f1f5f9',color:checkedList.length?'#fff':'#94a3b8',fontWeight:600,fontSize:13,cursor:checkedList.length?'pointer':'not-allowed',fontFamily:'inherit'}}
+              onClick={deleteChecked} disabled={!checkedList.length||deleting}>
+              {deleting ? '삭제 중...' : '🗑 선택 삭제'}
+            </button>
+          </div>
+
+          <div style={{overflowX:'auto'}}>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{textAlign:'center',width:36}}>
+                    <input type="checkbox" checked={allChecked} onChange={toggleAll} style={{width:15,height:15,cursor:'pointer'}}/>
+                  </th>
+                  <th>학생 ID</th>
+                  <th style={{textAlign:'center',color:'#1e40af'}}>단일구조적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/10</span></th>
+                  <th style={{textAlign:'center',color:'#92400e'}}>다중구조적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/10</span></th>
+                  <th style={{textAlign:'center',color:'#4c1d95'}}>관계적<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/20</span></th>
+                  <th style={{textAlign:'center',background:'#f0fdf4',color:'#166534'}}>총점<br/><span style={{fontSize:10,fontWeight:400,color:'#64748b'}}>/40</span></th>
+                  <th style={{textAlign:'center'}}>제출 시각</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.sort((a,b)=>a.studentId.localeCompare(b.studentId)).map(r=>(
+                  <tr key={r.studentId} style={{background:checked[ck(r)]?'#fef2f2':''}}>
+                    <td style={{textAlign:'center'}}>
+                      <input type="checkbox" checked={!!checked[ck(r)]} onChange={()=>toggleCheck(r)} style={{width:15,height:15,cursor:'pointer'}}/>
+                    </td>
+                    <td style={{fontWeight:700}}>{r.studentId}</td>
+                    <td className="sc" style={{color:'#1e40af'}}>{r.scores.사실적}</td>
+                    <td className="sc" style={{color:'#92400e'}}>{r.scores.적용적}</td>
+                    <td className="sc" style={{color:'#4c1d95'}}>{r.scores.전이적}</td>
+                    <td className="sc" style={{fontWeight:700,background:'#f0fdf4',color:'#166534'}}>{r.scores.total}</td>
+                    <td style={{fontSize:12,color:'#94a3b8',textAlign:'center'}}>{r.timestamp?new Date(r.timestamp).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'-'}</td>
+                    <td><button className="btn" style={{padding:'5px 12px',fontSize:12}} onClick={()=>setDetailId(r.studentId)}>상세보기</button></td>
+                  </tr>
+                ))}
+                {filtered.length>1&&(
+                  <tr style={{background:'#f8fafc',fontWeight:700}}>
+                    <td></td>
+                    <td style={{color:'#475569',fontSize:12}}>평균</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.사실적)}</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.적용적)}</td>
+                    <td className="sc">{avg(filtered,r=>r.scores.전이적)}</td>
+                    <td className="sc" style={{color:'#16a34a'}}>{avg(filtered,r=>r.scores.total)}</td>
+                    <td></td><td></td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <p style={{fontSize:11,color:'#94a3b8',textAlign:'center',marginTop:20}}>10초마다 자동 갱신 | 저장소: Google Sheets</p>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   교사 로그인
+══════════════════════════════════════════ */
+function TeacherLogin({ onSuccess, onBack }) {
+  const [pw, setPw]     = useState('');
+  const [err, setErr]   = useState('');
+  const [show, setShow] = useState(false);
+
+  const check = () => {
+    if (pw === TEACHER_PASSWORD) { onSuccess(); }
+    else { setErr('비밀번호가 틀렸습니다. 다시 입력해 주세요.'); setPw(''); }
+  };
+
+  return (
+    <div style={{padding:'3rem 1.5rem',maxWidth:400,margin:'0 auto'}}>
+      <button className="btn" style={{marginBottom:28,fontSize:13}} onClick={onBack}>← 처음으로</button>
+      <div style={{textAlign:'center',marginBottom:32}}>
+        <div style={{width:64,height:64,borderRadius:'50%',background:'#dbeafe',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 16px',fontSize:28}}>🔒</div>
+        <h2 style={{fontSize:22,fontWeight:700,marginBottom:6}}>교사 전용</h2>
+        <p style={{fontSize:14,color:'#64748b'}}>비밀번호를 입력하세요</p>
+      </div>
+      <div style={{position:'relative',marginBottom:16}}>
+        <input
+          type={show ? 'text' : 'password'}
+          placeholder="비밀번호 입력"
+          value={pw}
+          onChange={e=>{setPw(e.target.value);setErr('');}}
+          onKeyDown={e=>{ if(e.key==='Enter') check(); }}
+          style={{fontSize:17,paddingRight:48}}
+          autoFocus
+        />
+        <button onClick={()=>setShow(s=>!s)}
+          style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:18,color:'#94a3b8',padding:4}}>
+          {show ? '🙈' : '👁️'}
+        </button>
+      </div>
+      {err && (
+        <div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:14,color:'#dc2626'}}>{err}</div>
+      )}
+      <button className="btn btn-blue" style={{width:'100%',padding:'16px',fontSize:17}} onClick={check}>확인 →</button>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════
+   앱 라우터
+══════════════════════════════════════════ */
+function App() {
+  const [view, setView]   = useState('home');
+  const [sInfo, setSInfo] = useState(null);
+  const reset = () => { setView('home'); setSInfo(null); };
+  // URL에 #teacher (또는 ?teacher)가 있을 때만 교사 버튼 노출
+  const showTeacher = (typeof window !== 'undefined') &&
+    (window.location.hash.indexOf('teacher') !== -1 ||
+     window.location.search.indexOf('teacher') !== -1);
+
+  if (view==='home')          return <Home onStudent={()=>setView('login')} onTeacher={()=>setView('teacher-login')} showTeacher={showTeacher}/>;
+  if (view==='login')         return <StudentLogin onBack={reset} onNext={info=>{setSInfo(info);setView('exam');}}/>;
+  if (view==='exam' && sInfo) return <ExamInterface {...sInfo} onDone={()=>setView('done')}/>;
+  if (view==='done')          return <StudentDone/>;
+  if (view==='teacher-login') return <TeacherLogin onBack={reset} onSuccess={()=>setView('teacher')}/>;
+  if (view==='teacher')       return <TeacherDashboard onBack={reset}/>;
+  return null;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
